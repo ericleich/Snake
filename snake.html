@@ -1,0 +1,160 @@
+<HTML>
+<HEAD>
+  <SCRIPT SRC="snake-compiled.js"></SCRIPT>
+  <script type="text/javascript">var snake = new Snake();</script>
+
+<STYLE>
+
+.gem-piece {
+	height: 20px;
+	width: 20px;
+	display: block;
+}
+
+.counter {
+	height: 20px;
+	width: 50px;
+	display: inline;
+}
+
+.game-board {
+	height: 300px;
+	width: 600px;
+	position: absolute;
+	border: 3px solid black;
+	float: left;
+	text-align: left;
+	background: url('images/snakeBackground100.jpg');
+}
+
+.snake-piece {
+	height: 20px;
+	width: 20px;
+	background: url('images/head_christmas.jpg');
+	position: absolute;
+}
+
+.score-message {
+	font: 14px;
+}
+
+.previous-scores {
+	font: 14px;
+	font-decoration: bold;
+	height: 300px;
+	width: 150px;
+	float: right;
+	overflow: scroll;
+}
+
+.content1 {
+	width: 800px;
+}
+
+.previous-scores-text {
+	font-size: 12px;
+	color: blue;
+}
+
+form {
+	display: inline;
+}
+
+.hotkeys {
+	float: left;
+	font: 12px;
+	margin-top: 5px;
+}
+
+.finalScore {
+	float: right;
+	display: none;
+	color: red;
+	text-align: center;
+	padding-top: 10px;
+	font-weight: bold;
+	font-size: 32px;
+}
+
+#pauseGameOverlay {
+	position: fixed;
+	z-index: 100;
+	top: 0px;
+	left: 0px;
+	height: 100%;
+	width: 100%;
+	display: none;
+	background: url('images/transparentWhite.png');
+}
+
+#pauseGameMessage {
+	color: red;
+	text-align: center;
+	padding-top: 22%;
+	font-weight: bold;
+	font-size: 48px;
+}
+
+#pauseButton {
+	z-index: 101;
+}
+
+#saveButton {
+	z-index: 101;
+}
+</STYLE>
+
+</HEAD>
+
+<BODY STYLE="background: url('images/background_snake_halloween.jpg'); color: white;" >
+	<div align="center">
+		<DIV ID="pauseGameOverlay">
+			<DIV ID="pauseGameMessage">Game Paused</DIV>
+		</DIV>
+		<H1>Welcome to Snake - Special Version for my Baby Nicole <3</H1>
+		<P>Use the directional arrows to guide the Snake to the red gems in order to
+		score points. You will lose if you hit the wall or your body.</P>
+		<P>You can save game at any time during the game. You can load your previous save
+		once the game is over.</P>
+		<FORM ID="snakeSpeedForm" NAME="snakeSpeedForm">
+			Enter snake speed in moves per second:
+			<INPUT TYPE="radio" NAME="snakeSpeed" VALUE="5" CHECKED>5</INPUT>
+			<INPUT TYPE="radio" NAME="snakeSpeed" VALUE="10">10</INPUT>
+			<INPUT TYPE="radio" NAME="snakeSpeed" VALUE="20">20</INPUT>
+			<INPUT TYPE="radio" NAME="snakeSpeed" VALUE="30">30</INPUT>
+			<INPUT TYPE="radio" NAME="snakeSpeed" VALUE="40">40</INPUT>
+			<INPUT TYPE="radio" NAME="snakeSpeed" VALUE="50">50</INPUT>
+			<INPUT TYPE="button" ID="restartButton" VALUE="New Game" ONCLICK="snake.init()">
+			<INPUT TYPE="button" ID="loadButton" style="position: relative" VALUE="Load" ONCLICK="snake.loadGame()">
+		</FORM>
+		<INPUT TYPE="button" ID="pauseButton" style="position: relative" VALUE="Pause" ONCLICK="snake.pauseGame()">
+		<INPUT TYPE="button" ID="saveButton" style="position: relative" VALUE="Save" ONCLICK="snake.saveGame()">
+		<BR>
+		<DIV STYLE="width: 600px; text-align: left">
+			<DIV ID="hotkeys" CLASS="hotkeys">
+				Hotkeys:
+				
+					<LI>N --------> New Game</LI>
+					<LI>Space ----> Pause Game</LI>
+					<LI>S --------> Save Game</LI>
+					<LI>L ----> Load Game</LI>
+				
+			</DIV>
+			<DIV ID="finalScore" CLASS="finalScore">
+				Game over. Your score is:
+				<DIV ID="finalScoreNum" STYLE="display: inline">0</DIV>
+			</DIV>
+		</DIV>
+		<DIV style="clear: both">
+			<H3>Current Score:
+				<DIV ID="counter" CLASS="counter"></DIV>
+			</H3>
+		</DIV>
+		<DIV ID="content1" class="content1">
+			<DIV ID="gameBoard" CLASS="game-board"></DIV>
+			<DIV ID="previousScores" CLASS="previous-scores">Previous Scores:
+			</DIV>
+		</DIV>
+  </div>
+</BODY>
+</HTML>
