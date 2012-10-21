@@ -2,18 +2,13 @@ goog.provide('Snake');
 goog.provide('Snake.Coordinates');
 
 goog.require('goog.array');
+goog.require('goog.date');
 goog.require('goog.dom');
 goog.require('goog.dom.forms');
 goog.require('goog.events');
 goog.require('goog.events.EventType');
 goog.require('goog.object');
 goog.require('goog.style');
-
-
-//CONSTANTS
-var SNAKE_HEAD_URL = "url('images/head_halloween.png')";
-var SNAKE_BODY_URL = "url('images/body_halloween.gif')";
-var SNAKE_GEM_URL = "url('images/gem_halloween.png')";
 
 /**
  * The size of the snake and gem squares.
@@ -29,6 +24,8 @@ var SQUARE_SIZE = 20;
  * @constructor
  */
 Snake = function() {
+  this.setSnakePieceImages_();
+
   //speed of snake in moves per second
   this.snakeSpeed = 0;
   this.gameOver = true;
@@ -63,6 +60,33 @@ Snake.Direction = {
   'RIGHT': 3
 };
 
+Snake.prototype.setSnakePieceImages_ = function() {
+  var now = new goog.date.Date();
+  // TODO: Decide on an image format. Preferably png.
+  switch(now.getMonth()) {
+    case goog.date.month.OCT:
+      this.headUrl = "url('images/head_halloween.png')";
+      this.bodyUrl = "url('images/body_halloween.gif')";
+      this.gemUrl = "url('images/gem_halloween.png')";
+      break;
+    case goog.date.month.NOV:
+      this.headUrl = "url('images/head_turkey.png')";
+      this.bodyUrl = "url('images/body_turkey.png')";
+      this.gemUrl = "url('images/gem_turkey.png')";
+      break;
+    case goog.date.month.DEC:
+      this.headUrl = "url('images/head_christmas.png')";
+      this.bodyUrl = "url('images/body_christmas.png')";
+      this.gemUrl = "url('images/gem_christmas.png')";
+      break;
+    default:
+      this.headUrl = "url('images/head_default.jpg')";
+      this.bodyUrl = "url('images/body_default.jpg')";
+      this.gemUrl = "url('images/gem_default.png')";
+      break;
+  }
+}
+
 /**
  * Handles the snake game's key events, such as moving the snake with
  * directional arrows or using keyboard shortcuts to start new game.
@@ -71,7 +95,6 @@ Snake.Direction = {
  * @private
  */
 Snake.prototype.handleKeyEvent = function(evt) {
-  evt = (evt) ? evt : ((window.event) ? event : null);
   if (evt) {
     switch (evt.keyCode) {
       case 37:
@@ -140,13 +163,6 @@ Snake.prototype.init = function() {
 
   //disable form
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
-  if (!isIE) {
-    //get focus off radio, then blur the button
-    goog.dom.getElement('restartButton').focus();
-    goog.dom.getElement('restartButton').blur();
-  }
-
-
 
   goog.dom.getElement('counter').innerHTML = this.counter;
   this.gameBoardDiv.innerHTML = "";
@@ -154,7 +170,7 @@ Snake.prototype.init = function() {
   var gemPieceDiv = goog.dom.createElement('div');
   gemPieceDiv.id = 'gemPiece';
   gemPieceDiv.className = 'gem-piece';
-  gemPieceDiv.style.backgroundImage = SNAKE_GEM_URL;
+  gemPieceDiv.style.backgroundImage = this.gemUrl;
   goog.dom.appendChild(this.gameBoardDiv, gemPieceDiv);
   this.setGemPiece();
 
@@ -170,7 +186,7 @@ Snake.prototype.init = function() {
   snakePieceDiv.className = 'snake-Piece';
   snakePieceDiv.style.top = SQUARE_SIZE * yCoord;
   snakePieceDiv.style.left = SQUARE_SIZE * xCoord;
-  snakePieceDiv.style.backgroundImage = SNAKE_HEAD_URL;
+  snakePieceDiv.style.backgroundImage = this.headUrl;
   goog.dom.appendChild(this.gameBoardDiv, snakePieceDiv);
   
   this.snakeHeadID = this.snakeLength;
@@ -417,8 +433,8 @@ Snake.prototype.move = function() {
     }
     
     // Set snake head.
-    oldHeadDiv.style.backgroundImage = SNAKE_BODY_URL;
-    newHeadDiv.style.backgroundImage = SNAKE_HEAD_URL;
+    oldHeadDiv.style.backgroundImage = this.bodyUrl;
+    newHeadDiv.style.backgroundImage =  this.headUrl;
     
     this.snakeHeadID = newHead.id;
     this.snakeQueue.push(newHead);
@@ -542,11 +558,6 @@ Snake.prototype.loadGame = function() {
   
   // Disable form.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
-  if (!isIE) {
-    //get focus off radio, then blur the button
-    goog.dom.getElement('restartButton').focus();
-    goog.dom.getElement('restartButton').blur();
-  }
   
   goog.dom.getElement('counter').innerHTML = counter;
   this.gameBoardDiv.innerHTML = "";
@@ -554,7 +565,7 @@ Snake.prototype.loadGame = function() {
   var gemPieceDiv = goog.dom.createElement('div');
   gemPieceDiv.id = 'gemPiece';
   gemPieceDiv.className = 'gem-piece';
-  gemPieceDiv.style.backgroundImage = SNAKE_GEM_URL;
+  gemPieceDiv.style.backgroundImage = this.gemUrl;
   goog.dom.appendChild(this.gameBoardDiv, gemPieceDiv);
   this.setGemPiece(this.gemCoords.x, this.gemCoords.y);
 
@@ -565,9 +576,9 @@ Snake.prototype.loadGame = function() {
     snakePieceDiv.style.top = SQUARE_SIZE * coordsEntry.yCoord;
     snakePieceDiv.style.left = SQUARE_SIZE * coordsEntry.xCoord;
     if (coordsEntry.id == this.snakeHeadID) { // Set head.
-      snakePieceDiv.style.backgroundImage = SNAKE_HEAD_URL;
+      snakePieceDiv.style.backgroundImage = this.headUrl;
     } else { // Set body.
-      snakePieceDiv.style.backgroundImage = SNAKE_BODY_URL;
+      snakePieceDiv.style.backgroundImage = this.bodyUrl;
     }
     goog.dom.appendChild(this.gameBoardDiv, snakePieceDiv);
   }, this);

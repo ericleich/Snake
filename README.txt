@@ -7,13 +7,16 @@ Technologies used:
 
 - HTML5
 - JavaScript
-- Google Closure Library
-- Google Closure Compiler
+- Closure Library (http://code.google.com/p/closure-library/downloads/list)
+- Closure Compiler (http://closure-compiler.appspot.com)
 
-There is no setup required to get this project up and running. Just grab the
-code and open up snake.html.
+Setup
+1. Download the closure library and include the closure-library/ folder in
+   the top level directory of the project.
+2. Open up snake.html. You can reference the uncompiled JavaScript or the
+   compiled version.
 
 When making changes to the code, be sure to compile the changes using  
-http://closure-compiler.appspot.com/ with the Closure Library URL, and
-using "Advanced" optimizations. The game should run against the compiled
-version of the JavaScript.
+the Closure Compiler with the Closure Library URL, and using "Advanced"
+optimizations. The game should run against the compiled version of the
+JavaScript.
