@@ -6,6 +6,10 @@
   <script type="text/javascript">var snake = new Snake();</script>
 
 <STYLE>
+body {
+	background: url('images/background_snake_halloween.jpg');
+	color: white;
+}
 
 .gem-piece {
 	height: 20px;
@@ -32,7 +36,6 @@
 .snake-piece {
 	height: 20px;
 	width: 20px;
-	background: url('images/head_christmas.jpg');
 	position: absolute;
 }
 
@@ -79,22 +82,38 @@ form {
 }
 
 #pauseGameOverlay {
-	position: fixed;
+	display: none;
+	position: absolute;
 	z-index: 100;
 	top: 0px;
 	left: 0px;
 	height: 100%;
 	width: 100%;
-	display: none;
 	background: url('images/transparentWhite.png');
 }
 
 #pauseGameMessage {
 	color: red;
-	text-align: center;
-	padding-top: 22%;
+	height: 100%;
+	width: 100%;
 	font-weight: bold;
 	font-size: 48px;
+
+  /* Flexbox for centering. */
+	display: -webkit-box;
+  -webkit-box-orient: horizontal;
+  -webkit-box-pack: center;
+  -webkit-box-align: center;
+
+  display: -moz-box;
+  -moz-box-orient: horizontal;
+  -moz-box-pack: center;
+  -moz-box-align: center;
+
+  display: box;
+  box-orient: horizontal;
+  box-pack: center;
+  box-align: center;
 }
 
 #pauseButton {
@@ -108,7 +127,7 @@ form {
 
 </HEAD>
 
-<BODY STYLE="background: url('images/background_snake_halloween.jpg'); color: white;" >
+<BODY>
 	<div align="center">
 		<DIV ID="pauseGameOverlay">
 			<DIV ID="pauseGameMessage">Game Paused</DIV>
@@ -127,7 +146,8 @@ form {
 			<INPUT TYPE="radio" NAME="snakeSpeed" VALUE="40">40</INPUT>
 			<INPUT TYPE="radio" NAME="snakeSpeed" VALUE="50">50</INPUT>
 			<INPUT TYPE="button" ID="restartButton" VALUE="New Game" ONCLICK="snake.init()">
-			<INPUT TYPE="button" ID="loadButton" style="position: relative" VALUE="Load" ONCLICK="snake.loadGame()">
+			<INPUT TYPE="button" ID="loadButton" style="position: relative" VALUE="Load"
+			    ONCLICK="snake.loadGame()">
 		</FORM>
 		<INPUT TYPE="button" ID="pauseButton" style="position: relative" VALUE="Pause" ONCLICK="snake.pauseGame()">
 		<INPUT TYPE="button" ID="saveButton" style="position: relative" VALUE="Save" ONCLICK="snake.saveGame()">
@@ -154,7 +174,8 @@ form {
 		</DIV>
 		<DIV ID="content1" class="content1">
 			<DIV ID="gameBoard" CLASS="game-board"></DIV>
-			<DIV ID="previousScores" CLASS="previous-scores">Previous Scores:
+			<DIV ID="previousScores" CLASS="previous-scores">
+				Previous Scores:
 			</DIV>
 		</DIV>
   </div>

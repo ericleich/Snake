@@ -136,9 +136,6 @@ Snake.prototype.handleKeyEvent = function(evt) {
   }
 };
 
-/** @const */
-var isIE = (navigator.appName == "Microsoft Internet Explorer");
-
 /**
  * Initializes a new snake game.
  */
@@ -246,20 +243,14 @@ Snake.prototype.pauseGame = function() {
     if (pauseButton) {
       pauseButton.value = "Pause";
     }
-    //screw you IE, you can't support this feature easily
-    if (!isIE) {
-      goog.dom.getElement('pauseGameOverlay').style.display = "none";
-    }
+    goog.dom.getElement('pauseGameOverlay').style.display = "none";
     setTimeout('snake.move()', 1000/this.snakeSpeed);
   } else {
     this.gamePaused = true;
     if (pauseButton) {
       pauseButton.value = "Resume";
     }
-    //screw you IE, you can't support this feature easily
-    if (!isIE) {
-      goog.dom.getElement('pauseGameOverlay').style.display = "block";
-    }
+    goog.dom.getElement('pauseGameOverlay').style.display = "block";
   }
 };
 
@@ -559,7 +550,7 @@ Snake.prototype.loadGame = function() {
   // Disable form.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
   
-  goog.dom.getElement('counter').innerHTML = counter;
+  goog.dom.getElement('counter').innerHTML = this.counter;
   this.gameBoardDiv.innerHTML = "";
   
   var gemPieceDiv = goog.dom.createElement('div');
