@@ -168,20 +168,14 @@ Snake.prototype.init = function() {
   goog.dom.getElement('counter').innerHTML = this.counter;
   this.createGameBoard_();
   //this.gameBoardDiv.innerHTML = "";
-  
-  // TODO: Probably better to not create the gem piece in code.
-  var gemPieceDiv = goog.dom.createElement('div');
-  gemPieceDiv.id = 'gemPiece';
-  gemPieceDiv.className = 'gem-piece';
-  gemPieceDiv.style.backgroundImage = this.gemUrl;
-  goog.dom.appendChild(this.gameBoardDiv, gemPieceDiv);
-  this.setGemPiece();
 
-  var size = goog.style.getContentBoxSize(this.gameBoardDiv);
-  this.maxCoords.y = Math.floor(size.height / SQUARE_SIZE) - 1;
-  this.maxCoords.x = Math.floor(size.width / SQUARE_SIZE) - 1;
+  this.maxCoords.y = Math.floor(this.gameBoardSize.height / SQUARE_SIZE) - 1;
+  this.maxCoords.x = Math.floor(this.gameBoardSize.width / SQUARE_SIZE) - 1;
+  this.map = new SnakeMap(new goog.math.Size(this.maxCoords.x, this.maxCoords.y));
   var yCoord = Math.floor (this.maxCoords.y / 2);
   var xCoord = Math.floor (this.maxCoords.x / 2);
+
+  this.setGemPiece();
   
   //create first snake piece
   var snakePieceDiv = goog.dom.createElement('div');
@@ -245,7 +239,7 @@ Snake.prototype.setGemPiece = function(xCoord, yCoord) {
   //Make sure gem piece is not set on a piece of snake.
   var randXCoord = xCoord || Math.floor(Math.random()*width);
   var randYCoord = yCoord || Math.floor(Math.random()*height);
-  while (!this.areGemCoordinatesValid(randXCoord, randYCoord)) {
+  while (!this.map.setGem(randYCoord, randXCoord)) {
     randXCoord = Math.floor(Math.random()*width);
     randYCoord = Math.floor(Math.random()*height);
   }
@@ -255,10 +249,6 @@ Snake.prototype.setGemPiece = function(xCoord, yCoord) {
   
   var randHeight = randYCoord * SQUARE_SIZE;
   var randWidth = randXCoord * SQUARE_SIZE;
-
-  var gemDiv = goog.dom.getElement('gemPiece');
-  gemDiv.style.marginTop = randHeight;
-  gemDiv.style.marginLeft = randWidth;
 };
 
 /**
@@ -316,27 +306,6 @@ Snake.prototype.getCoordinates = function(id) {
       return false;
     }
   });
-};
-
-/**
- * Determines if the given coordinates are valid for a gem spot. Coordinates
- * can be invalid if they overlap a piece of the snake.
- *
- * @param {number} xCoord The gem's x-coordinate.
- * @param {number} yCoord The gem's y-coordinate.
- * @return {boolean} Whether or not the gem's coordinates are valid.
- * @private
- */
-Snake.prototype.areGemCoordinatesValid = function(xCoord, yCoord) {
-  // Coordinates are valid if they don't overlap a part of the snake.
-  var coordinates = goog.array.find(this.snakeQueue, function(coordsEntry) {
-    if (coordsEntry.xCoord == xCoord && coordsEntry.yCoord == yCoord) {
-      return true;
-    } else {
-      return false;
-    }
-  });
-  return (coordinates == null);
 };
 
 /**
@@ -465,7 +434,7 @@ Snake.prototype.move = function() {
 
     this.previousDirection = this.currentDirection;
     
-    if (this.testGemOverlap_(newHeadDiv)) {
+    if (this.map.gemOverlaps(newHead)) {
       this.appendPieceToSnake = true;
       this.setGemPiece();
       
@@ -476,23 +445,6 @@ Snake.prototype.move = function() {
     }
     setTimeout('snake.move()', 1000/this.snakeSpeed);
   } 
-};
-
-/**
- * Determines whether or not the gem overlaps with the snake heard.
- *
- * @param {Object} snakeHeadDiv THe div element of the snake head.
- * @return {boolean} Whether or not the ggem overlaps with the snake head.
- * @private
- */
-Snake.prototype.testGemOverlap_ = function(snakeHeadDiv) {
-  var overlap = false;
-  if (snakeHeadDiv) {
-    var gemDiv = goog.dom.getElement('gemPiece');
-    overlap = (snakeHeadDiv.style.top == gemDiv.style.marginTop &&
-               snakeHeadDiv.style.left == gemDiv.style.marginLeft);
-  }
-  return overlap;
 };
 
 /**
@@ -614,17 +566,21 @@ Snake.prototype.loadGame = function() {
  * Represents the map of the snake game. Is also responsible for showing
  * snake piece elements on the screen.
  *
- * @param {number} width The width of the map.
- * @param {number} height The height of the map.
+ * @param {goog.math.Size} size The size of the map.
  * @constructor
  * @private
  */
-SnakeMap = function(width, height) {
-  this.width = width;
-  this.height = height;
-  /** @private */
+SnakeMap = function(size) {
+  this.size = size;
+  /** 
+   * Represents the game board. Uses a 2D array indexed by [row][column],
+   * where the number of rows is the height of the map, and the number of
+   * columns is the width of the map.
+   *
+   * @private
+   */
   this.map_ = new Array();
-  for (var index = 0; index < height; index++) {
+  for (var index = 0; index < size.height; index++) {
     this.map_[index] = new Array();
   }
 
@@ -656,19 +612,47 @@ SnakeMap = function(width, height) {
 };
 
 /**
- * Sets the gem on the game board.
+ * Sets the gem on the game board if passed a valid position.
  *
- * @param {number} xCoord The x-coordinate of the new gem placement.
- * @param {number} yCoord The y-coordinate of the new gem placement.
+ * @param {number} row The row of the new gem placement.
+ * @param {number} column The column of the new gem placement.
  * @return {boolean} Whether or not the gem spot is valid.
  */
-SnakeMap.prototype.setGem = function(xCoord, yCoord) {
-  if (this.map_[xCoord][yCoord]) {
+SnakeMap.prototype.setGem = function(row, column) {
+  if (this.map_[row][column]) {
     return false;
   }
-  this.map_[xCoord][yCoord] = SnakeMap.piece.GEM;
-  goog.dom.getElement('spot' + xCoord + '-' + yCoord).style.backgroundImage = this.gemUrl;
+  if (this.gemRow !== undefined && this.gemColumn !== undefined) {
+    // Remove old gem.
+    this.map_[this.gemRow][this.gemColumn] = SnakeMap.piece.EMPTY;
+    goog.dom.getElement('spot' + this.gemRow + '-' + this.gemColumn).style.backgroundImage = '';
+  }
+  // Set new gem.
+  this.map_[row][column] = SnakeMap.piece.GEM;
+  goog.dom.getElement('spot' + row + '-' + column).style.backgroundImage = this.gemUrl;
+  
+  // Hold gem placement for next time.
+  this.gemRow = row;
+  this.gemColumn = column;
   return true;
+};
+
+/**
+ * Determines whether or not the gem overlaps with the snake head.
+ *
+ * @param {Snake.Coordinates} snakeHeadCoordinates The snake head's coordinates.
+ * @return {boolean} Whether or not the snake head touched the gem.
+ * @private
+ */
+SnakeMap.prototype.gemOverlaps = function(snakeHeadCoordinates) {
+  try {
+  return this.map_[snakeHeadCoordinates.yCoord][snakeHeadCoordinates.xCoord] ===
+      SnakeMap.piece.GEM;
+  } catch (exception) {
+    // TODO: Remove need for try/catch. Added because when game is over, making a
+    // check for indices out of bounds. Perhaps an index check should be made here.
+    return false;
+  }
 };
 
 SnakeMap.piece = {
