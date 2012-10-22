@@ -60,6 +60,9 @@ Snake.Direction = {
   'RIGHT': 3
 };
 
+/**
+ * Determines which snake piece images to use based on the current date.
+ */
 Snake.prototype.setSnakePieceImages_ = function() {
   var now = new goog.date.Date();
   // TODO: Decide on an image format. Preferably png.
@@ -85,7 +88,7 @@ Snake.prototype.setSnakePieceImages_ = function() {
       this.gemUrl = "url('images/gem_default.png')";
       break;
   }
-}
+};
 
 /**
  * Handles the snake game's key events, such as moving the snake with
@@ -146,6 +149,7 @@ Snake.prototype.init = function() {
   // Hold a reference to the game board div and snake speed form,
   // as they're used often.
   this.gameBoardDiv = goog.dom.getElement('gameBoard');
+  this.gameBoardSize = goog.style.getContentBoxSize(this.gameBoardDiv);
   this.snakeSpeedForm =
       /** @type {HTMLFormElement} */ (goog.dom.getElement('snakeSpeedForm'));
   
@@ -158,12 +162,14 @@ Snake.prototype.init = function() {
   this.snakeHeadID = -1;
   this.snakeSpeed = goog.dom.forms.getValueByName(this.snakeSpeedForm, 'snakeSpeed');
 
-  //disable form
+  // Disable form.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
 
   goog.dom.getElement('counter').innerHTML = this.counter;
-  this.gameBoardDiv.innerHTML = "";
+  this.createGameBoard_();
+  //this.gameBoardDiv.innerHTML = "";
   
+  // TODO: Probably better to not create the gem piece in code.
   var gemPieceDiv = goog.dom.createElement('div');
   gemPieceDiv.id = 'gemPiece';
   gemPieceDiv.className = 'gem-piece';
@@ -180,7 +186,7 @@ Snake.prototype.init = function() {
   //create first snake piece
   var snakePieceDiv = goog.dom.createElement('div');
   snakePieceDiv.id = 'snakePiece' + (++this.snakeLength);
-  snakePieceDiv.className = 'snake-Piece';
+  snakePieceDiv.className = 'snake-piece';
   snakePieceDiv.style.top = SQUARE_SIZE * yCoord;
   snakePieceDiv.style.left = SQUARE_SIZE * xCoord;
   snakePieceDiv.style.backgroundImage = this.headUrl;
@@ -190,6 +196,33 @@ Snake.prototype.init = function() {
   //add first piece to queue
   this.snakeQueue.push(new Snake.Coordinates(this.snakeLength, xCoord, yCoord));
   this.move();
+};
+
+Snake.prototype.createGameBoard_ = function() {
+  // First clear game board.
+  this.gameBoardDiv.innerHTML = "";
+
+  var height = Math.floor(this.gameBoardSize.height / SQUARE_SIZE);
+  var width = Math.floor(this.gameBoardSize.width / SQUARE_SIZE);
+
+  var gamePieceRow, gamePieceDiv;
+  for (var i = 0; i < height; i++) {
+    gamePieceRow = goog.dom.createElement('div');
+    gamePieceRow.id = 'row' + i;
+    gamePieceRow.style.display = 'block';
+    for (var j = 0; j < width; j++) {
+      // Create a div to hold a game piece.
+      gamePieceDiv = goog.dom.createElement('div');
+      gamePieceDiv.id = 'spot' + i + '-' + j;
+      gamePieceDiv.style.width = SQUARE_SIZE;
+      gamePieceDiv.style.height = SQUARE_SIZE;
+      gamePieceDiv.style.display = 'inline-block';
+      //gamePieceDiv.style.backgroundImage = this.gemUrl;
+      //gamePieceDiv.className = '';
+      goog.dom.appendChild(gamePieceRow, gamePieceDiv);
+    }
+    goog.dom.appendChild(this.gameBoardDiv, gamePieceRow);
+  }
 };
 
 /**
@@ -575,6 +608,74 @@ Snake.prototype.loadGame = function() {
   }, this);
   
   this.pauseGame();
+};
+
+/**
+ * Represents the map of the snake game. Is also responsible for showing
+ * snake piece elements on the screen.
+ *
+ * @param {number} width The width of the map.
+ * @param {number} height The height of the map.
+ * @constructor
+ * @private
+ */
+SnakeMap = function(width, height) {
+  this.width = width;
+  this.height = height;
+  /** @private */
+  this.map_ = new Array();
+  for (var index = 0; index < height; index++) {
+    this.map_[index] = new Array();
+  }
+
+  /** TODO: Remove duplicate. Copied from snake class. */
+  var now = new goog.date.Date();
+  // TODO: Decide on an image format. Preferably png.
+  switch(now.getMonth()) {
+    case goog.date.month.OCT:
+      this.headUrl = "url('images/head_halloween.png')";
+      this.bodyUrl = "url('images/body_halloween.gif')";
+      this.gemUrl = "url('images/gem_halloween.png')";
+      break;
+    case goog.date.month.NOV:
+      this.headUrl = "url('images/head_turkey.png')";
+      this.bodyUrl = "url('images/body_turkey.png')";
+      this.gemUrl = "url('images/gem_turkey.png')";
+      break;
+    case goog.date.month.DEC:
+      this.headUrl = "url('images/head_christmas.png')";
+      this.bodyUrl = "url('images/body_christmas.png')";
+      this.gemUrl = "url('images/gem_christmas.png')";
+      break;
+    default:
+      this.headUrl = "url('images/head_default.jpg')";
+      this.bodyUrl = "url('images/body_default.jpg')";
+      this.gemUrl = "url('images/gem_default.png')";
+      break;
+  }
+};
+
+/**
+ * Sets the gem on the game board.
+ *
+ * @param {number} xCoord The x-coordinate of the new gem placement.
+ * @param {number} yCoord The y-coordinate of the new gem placement.
+ * @return {boolean} Whether or not the gem spot is valid.
+ */
+SnakeMap.prototype.setGem = function(xCoord, yCoord) {
+  if (this.map_[xCoord][yCoord]) {
+    return false;
+  }
+  this.map_[xCoord][yCoord] = SnakeMap.piece.GEM;
+  goog.dom.getElement('spot' + xCoord + '-' + yCoord).style.backgroundImage = this.gemUrl;
+  return true;
+};
+
+SnakeMap.piece = {
+  'EMPTY': 0,
+  'HEAD': 1,
+  'BODY': 2,
+  'GEM': 3
 };
 
 goog.exportSymbol('Snake', Snake);
