@@ -1,5 +1,5 @@
 goog.provide('Snake');
-goog.provide('Snake.Coordinates');
+goog.provide('SnakeMap');
 
 goog.require('goog.array');
 goog.require('goog.date');
@@ -32,7 +32,7 @@ Snake = function() {
   this.gamePaused = false;
   this.appendPieceToSnake = false;
   this.counter = 0;
-  this.snakeLength = 0;
+  this.snakeLength = 1;
   this.currentDirection = Snake.Direction.RIGHT;
   this.previousDirection = Snake.Direction.RIGHT;
   this.snakeQueue = [];
@@ -53,6 +53,11 @@ Snake = function() {
   goog.events.listen(document, goog.events.EventType.KEYDOWN, this.handleKeyEvent, false, this);
 };
 
+/**
+ * Enum for the snake's direction.
+ *
+ * @enum {number}
+ */
 Snake.Direction = {
   'UP': 0,
   'DOWN': 1,
@@ -62,6 +67,8 @@ Snake.Direction = {
 
 /**
  * Determines which snake piece images to use based on the current date.
+ *
+ * @private
  */
 Snake.prototype.setSnakePieceImages_ = function() {
   var now = new goog.date.Date();
@@ -156,10 +163,9 @@ Snake.prototype.init = function() {
   this.gameOver = false;
   this.gamePaused = false;
   this.counter = 0;
-  this.snakeLength = 0;
+  this.snakeLength = 1;
   this.currentDirection = Snake.Direction.RIGHT;
   this.snakeQueue = new Array();
-  this.snakeHeadID = -1;
   this.snakeSpeed = goog.dom.forms.getValueByName(this.snakeSpeedForm, 'snakeSpeed');
 
   // Disable form.
@@ -167,31 +173,27 @@ Snake.prototype.init = function() {
 
   goog.dom.getElement('counter').innerHTML = this.counter;
   this.createGameBoard_();
-  //this.gameBoardDiv.innerHTML = "";
 
-  this.maxCoords.y = Math.floor(this.gameBoardSize.height / SQUARE_SIZE) - 1;
-  this.maxCoords.x = Math.floor(this.gameBoardSize.width / SQUARE_SIZE) - 1;
+  this.maxCoords.y = Math.floor(this.gameBoardSize.height / SQUARE_SIZE);
+  this.maxCoords.x = Math.floor(this.gameBoardSize.width / SQUARE_SIZE);
   this.map = new SnakeMap(new goog.math.Size(this.maxCoords.x, this.maxCoords.y));
   var yCoord = Math.floor (this.maxCoords.y / 2);
   var xCoord = Math.floor (this.maxCoords.x / 2);
 
   this.setGemPiece();
   
-  //create first snake piece
-  var snakePieceDiv = goog.dom.createElement('div');
-  snakePieceDiv.id = 'snakePiece' + (++this.snakeLength);
-  snakePieceDiv.className = 'snake-piece';
-  snakePieceDiv.style.top = SQUARE_SIZE * yCoord;
-  snakePieceDiv.style.left = SQUARE_SIZE * xCoord;
-  snakePieceDiv.style.backgroundImage = this.headUrl;
-  goog.dom.appendChild(this.gameBoardDiv, snakePieceDiv);
-  
-  this.snakeHeadID = this.snakeLength;
-  //add first piece to queue
-  this.snakeQueue.push(new Snake.Coordinates(this.snakeLength, xCoord, yCoord));
+  // Create first snake piece and add it to queue.
+  this.currentHead = new SnakeCoordinates(yCoord, xCoord);
+  this.map.setCoordinates(this.currentHead, SnakeMap.piece.HEAD);
+  this.snakeQueue.push(this.currentHead);
   this.move();
 };
 
+/**
+ * Creates a div for each valid position on the game board.
+ *
+ * @private
+ */
 Snake.prototype.createGameBoard_ = function() {
   // First clear game board.
   this.gameBoardDiv.innerHTML = "";
@@ -279,80 +281,38 @@ Snake.prototype.pauseGame = function() {
 
 /**
  * Represents a piece of the snake.
- * @param {number} id The id of the snake piece.
- * @param {number=} xCoord The piece's x-coordinate.
- * @param {number=} yCoord The piece's y-coordinate.
+ *
+ * @param {number=} row The piece's row number.
+ * @param {number=} column The piece's column number.
  * @constructor
  * @private
  */
-Snake.Coordinates = function(id, xCoord, yCoord) {
-  this.id = id;
-  this.xCoord = xCoord || -1;
-  this.yCoord = yCoord || -1;
+SnakeCoordinates = function(row, column) {
+  this.row = row || -1;
+  this.column = column || -1;
 };
 
 /**
- * Gets the specific snake piece given the piece's id.
+ * Gets a deep copy of the snake coordinates.
  *
- * @param {number} id The id of the coordinates.
- * @return {Snake.Coordinates} The snake piece.
- * @private
+ * @return {SnakeCoordinates} A deep copy of the snake coordinates.
  */
-Snake.prototype.getCoordinates = function(id) {
-  return goog.array.find(this.snakeQueue, function(coordsEntry) {
-    if (coordsEntry.id == id) {
-      return true;
-    } else {
-      return false;
-    }
-  });
+SnakeCoordinates.prototype.getDeepCopy = function() {
+  return new SnakeCoordinates(this.row, this.column);
 };
 
 /**
  * Checks if the snake went out of bounds or ran into itself.
  *
- * @param {Snake.Coordinates} oldHeadCoordinates The coordinates of
- *     the snake's old head.
+ * @param {SnakeCoordinates} newHeadCoordinates The coordinates of
+ *     the snake's new head.
  * @return {boolean} Whether or not the game is over.
  * @private
  */
-Snake.prototype.isGameOver = function(oldHeadCoordinates) {
-  var gameOver = false;
-  
-  // Test that coordinates are within game board.
-  switch (this.currentDirection) {
-    case Snake.Direction.LEFT:
-      gameOver = (oldHeadCoordinates.xCoord <= 0);
-      break;
-    case Snake.Direction.UP:
-      gameOver = (oldHeadCoordinates.yCoord <= 0);
-      break;
-    case Snake.Direction.RIGHT:
-      gameOver = (oldHeadCoordinates.xCoord >= this.maxCoords.x);
-      break;
-    case Snake.Direction.DOWN:
-      gameOver = (oldHeadCoordinates.yCoord >= this.maxCoords.y);
-      break;
-  }
-
-  if (!gameOver) {
-    // Test that snake doesn't overlap.
-    var coordinates = goog.array.find(this.snakeQueue, function(coordsEntry) {
-      if (coordsEntry.xCoord == oldHeadCoordinates.xCoord &&
-          coordsEntry.yCoord == oldHeadCoordinates.yCoord &&
-          coordsEntry.id != oldHeadCoordinates.id) {
-        return true;
-      } else {
-        return false;
-      }
-    });
-    if (coordinates) {
-      gameOver = true;
-    }
-  }
-  
-  return gameOver;
+Snake.prototype.isGameOver = function(newHeadCoordinates) {
+  return !this.map.coordinatesValid(newHeadCoordinates);
 };
+
 
 /**
  * Moves the snake 1 position in the current direction.
@@ -362,10 +322,22 @@ Snake.prototype.move = function() {
   if (this.gamePaused) {
     return;
   }
-  
-  var oldHead = this.getCoordinates(this.snakeHeadID);
-  this.gameOver = this.isGameOver(oldHead);
-  if (this.gameOver) {
+  var newHead = new SnakeCoordinates(this.currentHead.row, this.currentHead.column);
+  switch (this.currentDirection) {
+    case Snake.Direction.LEFT:
+      newHead.column--;
+      break;
+    case Snake.Direction.UP:
+      newHead.row--;
+      break;
+    case Snake.Direction.RIGHT:
+      newHead.column++;
+      break;
+    case Snake.Direction.DOWN:
+      newHead.row++;
+      break;
+  }
+  if (this.gameOver = this.isGameOver(newHead)) {
     var finalScoreNumDiv = goog.dom.getElement('finalScoreNum');
     finalScoreNumDiv.innerHTML = this.counter;
     var finalScoreDiv = goog.dom.getElement('finalScore');
@@ -380,61 +352,30 @@ Snake.prototype.move = function() {
     var previousScoresDiv = goog.dom.getElement('previousScores');
     goog.dom.appendChild(previousScoresDiv, previousScoresTextDiv);
   } else {
-    var newHead, newHeadDiv;
-    var oldHeadDiv = goog.dom.getElement('snakePiece' + this.snakeHeadID);
-    // Make new div if a piece needs to be appended.
-    // Otherwise grab the tail and set to head.
-    if (this.appendPieceToSnake) {
-      newHeadDiv = goog.dom.createElement('div');
-      newHeadDiv.id = 'snakePiece' + ++this.snakeLength;
-      newHeadDiv.className = 'snake-piece';
-      newHeadDiv.style.top = oldHeadDiv.offsetTop;
-      newHeadDiv.style.left = oldHeadDiv.offsetLeft;
-      
-      goog.dom.appendChild(this.gameBoardDiv, newHeadDiv);
-      
-      newHead = new Snake.Coordinates(this.snakeLength);
-      this.appendPieceToSnake = false;
-    } else {     
-      newHead = this.snakeQueue.shift();
-      newHeadDiv = goog.dom.getElement('snakePiece' + newHead.id);
-    }
-    newHead.xCoord = oldHead.xCoord;
-    newHead.yCoord = oldHead.yCoord;
 
-    switch (this.currentDirection) {
-      case Snake.Direction.LEFT:
-        newHead.xCoord--;
-        newHeadDiv.style.left = newHead.xCoord * SQUARE_SIZE;
-        newHeadDiv.style.top = newHead.yCoord * SQUARE_SIZE;
-        break;
-      case Snake.Direction.UP:
-        newHead.yCoord--;
-        newHeadDiv.style.left = newHead.xCoord * SQUARE_SIZE;
-        newHeadDiv.style.top = newHead.yCoord * SQUARE_SIZE;
-        break;
-      case Snake.Direction.RIGHT:
-        newHead.xCoord++;
-        newHeadDiv.style.left = newHead.xCoord * SQUARE_SIZE;
-        newHeadDiv.style.top = newHead.yCoord * SQUARE_SIZE;
-        break;
-      case Snake.Direction.DOWN:
-        newHead.yCoord++;
-        newHeadDiv.style.left = newHead.xCoord * SQUARE_SIZE;
-        newHeadDiv.style.top = newHead.yCoord * SQUARE_SIZE;
-        break;  
+    if (this.appendPieceToSnake) {
+      // Gem accounted for.
+      this.appendPieceToSnake = false;
+    } else {
+      // Remove the tail.
+      var tail = this.snakeQueue.shift();
+      this.map.clearCoordinates(tail);
     }
     
     // Set snake head.
-    oldHeadDiv.style.backgroundImage = this.bodyUrl;
-    newHeadDiv.style.backgroundImage =  this.headUrl;
-    
-    this.snakeHeadID = newHead.id;
+    if (this.snakeLength !== 1) {
+      // Ensures current head is not also the tail.
+      this.map.setCoordinates(this.currentHead, SnakeMap.piece.BODY);
+    }
+    this.map.setCoordinates(newHead, SnakeMap.piece.HEAD);
     this.snakeQueue.push(newHead);
 
     this.previousDirection = this.currentDirection;
+    this.currentHead = newHead;
     
+    // Check if gem was found.
     if (this.map.gemOverlaps(newHead)) {
+      this.snakeLength++;
       this.appendPieceToSnake = true;
       this.setGemPiece();
       
@@ -450,7 +391,7 @@ Snake.prototype.move = function() {
 /**
  * Gets a deep copy of the snake body pieces.
  *
- * @return {Array.<Snake.Coordinates>} A deep copy of the snake body.
+ * @return {Array.<SnakeCoordinates>} A deep copy of the snake body.
  * @private
  */
 Snake.prototype.getDeepCopyQueue = function() {
@@ -459,9 +400,8 @@ Snake.prototype.getDeepCopyQueue = function() {
   for (var index = 0; index < this.snakeQueue.length; index++) {
     snakeCoordinates = this.snakeQueue[index];
     snakeQueueDeepCopy.push(
-        new Snake.Coordinates(snakeCoordinates.id,
-                              snakeCoordinates.xCoord,
-                              snakeCoordinates.yCoord));
+        new SnakeCoordinates(snakeCoordinates.row,
+                             snakeCoordinates.column));
   }
   return snakeQueueDeepCopy;
 };
@@ -485,7 +425,7 @@ Snake.prototype.getDeepCopyGemCoords = function() {
 Snake.prototype.saveGame = function() {
   if (!this.gameOver) {
     this.saveGameVariables['snakeQueue'] = this.getDeepCopyQueue();
-    this.saveGameVariables['snakeHeadID'] = this.snakeHeadID;
+    this.saveGameVariables['currentHead'] = this.currentHead.getDeepCopy();
     this.saveGameVariables['counter'] = this.counter;
     this.saveGameVariables['snakeLength'] = this.snakeLength;
     this.saveGameVariables['snakeSpeed'] = this.snakeSpeed;
@@ -509,7 +449,7 @@ Snake.prototype.loadGame = function() {
   this.gameOver = false;
   
   this.snakeQueue = this.saveGameVariables['snakeQueue'];
-  this.snakeHeadID = this.saveGameVariables['snakeHeadID'];
+  this.currentHead = this.saveGameVariables['currentHead'];
   this.counter = this.saveGameVariables['counter'];
   this.snakeLength = this.saveGameVariables['snakeLength'];
   this.snakeSpeed = this.saveGameVariables['snakeSpeed'];
@@ -519,6 +459,7 @@ Snake.prototype.loadGame = function() {
   // Make deep copies of the queue and coordinates again, as they may
   // be needed on the next load.
   this.saveGameVariables['snakeQueue'] = this.getDeepCopyQueue();
+  this.saveGameVariables['currentHead'] = this.currentHead.getDeepCopy();
   this.saveGameVariables['gemCoords'] = this.getDeepCopyGemCoords();
   
   // Reset radio option.
@@ -530,33 +471,23 @@ Snake.prototype.loadGame = function() {
       radio[index].checked = true;
     }
   }
-  //goog.dom.forms.setValue(document.snakeSpeedForm.snakeSpeed, '' + this.snakeSpeed);
   
   // Disable form.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
   
   goog.dom.getElement('counter').innerHTML = this.counter;
-  this.gameBoardDiv.innerHTML = "";
-  
-  var gemPieceDiv = goog.dom.createElement('div');
-  gemPieceDiv.id = 'gemPiece';
-  gemPieceDiv.className = 'gem-piece';
-  gemPieceDiv.style.backgroundImage = this.gemUrl;
-  goog.dom.appendChild(this.gameBoardDiv, gemPieceDiv);
-  this.setGemPiece(this.gemCoords.x, this.gemCoords.y);
 
-  goog.array.forEach(this.snakeQueue, function(coordsEntry) {
-    var snakePieceDiv = goog.dom.createElement('div');
-    snakePieceDiv.id = 'snakePiece' + coordsEntry.id;
-    snakePieceDiv.className = 'snake-Piece';
-    snakePieceDiv.style.top = SQUARE_SIZE * coordsEntry.yCoord;
-    snakePieceDiv.style.left = SQUARE_SIZE * coordsEntry.xCoord;
-    if (coordsEntry.id == this.snakeHeadID) { // Set head.
-      snakePieceDiv.style.backgroundImage = this.headUrl;
+  // Recreate game board.
+  this.createGameBoard_();
+  this.map = new SnakeMap(new goog.math.Size(this.maxCoords.x, this.maxCoords.y));
+  this.setGemPiece(this.gemCoords.x, this.gemCoords.y);
+  goog.array.forEach(this.snakeQueue, function(coordinates) {
+    if (coordinates.row === this.currentHead.row &&
+        coordinates.column === this.currentHead.column) { // Set head.
+      this.map.setCoordinates(coordinates, SnakeMap.piece.HEAD);
     } else { // Set body.
-      snakePieceDiv.style.backgroundImage = this.bodyUrl;
+      this.map.setCoordinates(coordinates, SnakeMap.piece.BODY);
     }
-    goog.dom.appendChild(this.gameBoardDiv, snakePieceDiv);
   }, this);
   
   this.pauseGame();
@@ -612,6 +543,45 @@ SnakeMap = function(size) {
 };
 
 /**
+ * Sets the map value to the given piece for the provided position.
+ *
+ * @param {SnakeCoordinates} coordinates The coordinates to set.
+ * @param {SnakeMap.piece} piece The piece to set at the coordinate position.
+ */
+SnakeMap.prototype.setCoordinates = function(coordinates, piece) {
+  if (this.coordinatesInBounds_(coordinates)) {
+    this.map_[coordinates.row][coordinates.column] = piece;
+    var pieceDiv = goog.dom.getElement('spot' + coordinates.row + '-' + coordinates.column);
+    switch (piece) {
+      case SnakeMap.piece.EMPTY:
+        pieceDiv.style.backgroundImage = '';
+        break;
+      case SnakeMap.piece.HEAD:
+        pieceDiv.style.backgroundImage = this.headUrl;
+        break;
+      case SnakeMap.piece.BODY:
+        pieceDiv.style.backgroundImage = this.bodyUrl;
+        break;
+      case SnakeMap.piece.GEM:
+        pieceDiv.style.backgroundImage = this.gemUrl;
+        break;
+    }
+  }
+};
+
+/**
+ * Clears the map at the provided position.
+ *
+ * @param {SnakeCoordinates} coordinates The coordinates to clear.
+ */
+SnakeMap.prototype.clearCoordinates = function(coordinates) {
+  if (this.coordinatesInBounds_(coordinates)) {
+    this.map_[coordinates.row][coordinates.column] = SnakeMap.piece.EMPTY;
+    goog.dom.getElement('spot' + coordinates.row + '-' + coordinates.column).style.backgroundImage = '';
+  }
+};
+
+/**
  * Sets the gem on the game board if passed a valid position.
  *
  * @param {number} row The row of the new gem placement.
@@ -619,14 +589,10 @@ SnakeMap = function(size) {
  * @return {boolean} Whether or not the gem spot is valid.
  */
 SnakeMap.prototype.setGem = function(row, column) {
-  if (this.map_[row][column]) {
+  if (!this.coordinatesValid(new SnakeCoordinates(row, column))) {
     return false;
   }
-  if (this.gemRow !== undefined && this.gemColumn !== undefined) {
-    // Remove old gem.
-    this.map_[this.gemRow][this.gemColumn] = SnakeMap.piece.EMPTY;
-    goog.dom.getElement('spot' + this.gemRow + '-' + this.gemColumn).style.backgroundImage = '';
-  }
+
   // Set new gem.
   this.map_[row][column] = SnakeMap.piece.GEM;
   goog.dom.getElement('spot' + row + '-' + column).style.backgroundImage = this.gemUrl;
@@ -640,21 +606,52 @@ SnakeMap.prototype.setGem = function(row, column) {
 /**
  * Determines whether or not the gem overlaps with the snake head.
  *
- * @param {Snake.Coordinates} snakeHeadCoordinates The snake head's coordinates.
+ * @param {SnakeCoordinates} headCoordinates The snake head's coordinates.
  * @return {boolean} Whether or not the snake head touched the gem.
- * @private
  */
-SnakeMap.prototype.gemOverlaps = function(snakeHeadCoordinates) {
-  try {
-  return this.map_[snakeHeadCoordinates.yCoord][snakeHeadCoordinates.xCoord] ===
-      SnakeMap.piece.GEM;
-  } catch (exception) {
-    // TODO: Remove need for try/catch. Added because when game is over, making a
-    // check for indices out of bounds. Perhaps an index check should be made here.
+SnakeMap.prototype.gemOverlaps = function(headCoordinates) {
+  if (!this.coordinatesInBounds_(headCoordinates)) {
     return false;
   }
+
+  return headCoordinates.row === this.gemRow &&
+      headCoordinates.column === this.gemColumn;
 };
 
+/**
+ * Determines whether or not the current coordinates are in bounds and don't
+ * overlap with another piece of snake.
+ *
+ * @param {SnakeCoordinates} headCoordinates The snake head's coordinates.
+ * @return {boolean} Whether or not the coordinates are valid.
+ */
+SnakeMap.prototype.coordinatesValid = function(headCoordinates) {
+  return this.coordinatesInBounds_(headCoordinates) &&
+      this.map_[headCoordinates.row][headCoordinates.column] !=
+          SnakeMap.piece.BODY &&
+      this.map_[headCoordinates.row][headCoordinates.column] !=
+          SnakeMap.piece.HEAD;
+};
+
+/**
+ * Determines whether or not the current coordinates are in bounds.
+ *
+ * @param {SnakeCoordinates} coordinates The coordinates.
+ * @return {boolean} Whether or not the coordinates are in bounds.
+ * @private
+ */
+SnakeMap.prototype.coordinatesInBounds_ = function(coordinates) {
+  return coordinates.row >= 0 &&
+      coordinates.row < this.size.height &&
+      coordinates.column >= 0 &&
+      coordinates.column < this.size.width;
+};
+
+/**
+ * Enum for snake piece type.
+ *
+ * @enum {number}
+ */
 SnakeMap.piece = {
   'EMPTY': 0,
   'HEAD': 1,
