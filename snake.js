@@ -36,15 +36,6 @@ Snake = function() {
   this.currentDirection = Snake.Direction.RIGHT;
   this.previousDirection = Snake.Direction.RIGHT;
   this.snakeQueue = [];
-  this.snakeHeadID = -1;
-  this.maxCoords = {
-    'x': 0,
-    'y': 0
-  };
-  this.gemCoords = {
-    'x': 0,
-    'y': 0
-  };
 
   // Used for loading/saving game.
   this.saveGameVariables = {};
@@ -150,16 +141,15 @@ Snake.prototype.handleKeyEvent = function(evt) {
  * Initializes a new snake game.
  */
 Snake.prototype.init = function() {
-  //reset variables
-  goog.dom.getElement('finalScore').style.display = 'none';
+
 
   // Hold a reference to the game board div and snake speed form,
   // as they're used often.
   this.gameBoardDiv = goog.dom.getElement('gameBoard');
-  this.gameBoardSize = goog.style.getContentBoxSize(this.gameBoardDiv);
   this.snakeSpeedForm =
       /** @type {HTMLFormElement} */ (goog.dom.getElement('snakeSpeedForm'));
   
+  // Reset variables.
   this.gameOver = false;
   this.gamePaused = false;
   this.counter = 0;
@@ -168,24 +158,26 @@ Snake.prototype.init = function() {
   this.snakeQueue = new Array();
   this.snakeSpeed = goog.dom.forms.getValueByName(this.snakeSpeedForm, 'snakeSpeed');
 
-  // Disable form.
+  // Reset UI elements.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
-
+  goog.dom.getElement('finalScore').style.display = 'none';
   goog.dom.getElement('counter').innerHTML = this.counter;
+
+  // Set up game board.
+  var gameBoardDivSize = goog.style.getContentBoxSize(this.gameBoardDiv);
+  this.gameBoardSize = gameBoardDivSize.scale(1 / SQUARE_SIZE).floor();
   this.createGameBoard_();
+  this.map = new SnakeMap(this.gameBoardSize);
 
-  this.maxCoords.y = Math.floor(this.gameBoardSize.height / SQUARE_SIZE);
-  this.maxCoords.x = Math.floor(this.gameBoardSize.width / SQUARE_SIZE);
-  this.map = new SnakeMap(new goog.math.Size(this.maxCoords.x, this.maxCoords.y));
-  var yCoord = Math.floor (this.maxCoords.y / 2);
-  var xCoord = Math.floor (this.maxCoords.x / 2);
-
-  this.setGemPiece();
-  
-  // Create first snake piece and add it to queue.
-  this.currentHead = new SnakeCoordinates(yCoord, xCoord);
+  // Create first snake piece and gem.
+  var centerRow = Math.floor(this.gameBoardSize.height / 2);
+  var centerColumn = Math.floor(this.gameBoardSize.width / 2);
+  this.currentHead = new SnakeCoordinates(centerRow, centerColumn);
   this.map.setCoordinates(this.currentHead, SnakeMap.piece.HEAD);
   this.snakeQueue.push(this.currentHead);
+  this.setNewGemCoordinates();
+
+  // Start moving the snake.
   this.move();
 };
 
@@ -198,23 +190,18 @@ Snake.prototype.createGameBoard_ = function() {
   // First clear game board.
   this.gameBoardDiv.innerHTML = "";
 
-  var height = Math.floor(this.gameBoardSize.height / SQUARE_SIZE);
-  var width = Math.floor(this.gameBoardSize.width / SQUARE_SIZE);
-
   var gamePieceRow, gamePieceDiv;
-  for (var i = 0; i < height; i++) {
+  for (var i = 0; i < this.gameBoardSize.height; i++) {
     gamePieceRow = goog.dom.createElement('div');
     gamePieceRow.id = 'row' + i;
     gamePieceRow.style.display = 'block';
-    for (var j = 0; j < width; j++) {
+    for (var j = 0; j < this.gameBoardSize.width; j++) {
       // Create a div to hold a game piece.
       gamePieceDiv = goog.dom.createElement('div');
       gamePieceDiv.id = 'spot' + i + '-' + j;
       gamePieceDiv.style.width = SQUARE_SIZE;
       gamePieceDiv.style.height = SQUARE_SIZE;
       gamePieceDiv.style.display = 'inline-block';
-      //gamePieceDiv.style.backgroundImage = this.gemUrl;
-      //gamePieceDiv.className = '';
       goog.dom.appendChild(gamePieceRow, gamePieceDiv);
     }
     goog.dom.appendChild(this.gameBoardDiv, gamePieceRow);
@@ -222,35 +209,25 @@ Snake.prototype.createGameBoard_ = function() {
 };
 
 /**
- * Set's a new gem piece. If x and y coordinates are provided,
- * set those coordinates.  Otherwise, choose random coordinates.
+ * Sets new gem coordinates. If gem coordinates are provided, set those
+ * coordinates. Otherwise, choose random coordinates.
  *
- * @param {number=} xCoord opt_value The gem's x-coordinate (optional).
- * @param {number=} yCoord opt_value The gem's y-coordinate (optional).
+ * @param {SnakeCoordinates=} opt_gemCoordinates The gem's coordinates.
+ * @return {SnakeCoordinates} The new gem coordinates.
  * @private
  */
-Snake.prototype.setGemPiece = function(xCoord, yCoord) {
-  if (!this.gameBoardSize) {
-    // getting size is expensive - perform operation once and store results.
-    this.gameBoardSize = goog.style.getContentBoxSize(this.gameBoardDiv);
+Snake.prototype.setNewGemCoordinates = function(opt_gemCoordinates) {
+  // Make sure gem piece is not set on a piece of snake.
+  var randomRow = opt_gemCoordinates ? opt_gemCoordinates.row :
+      Math.floor(Math.random() * this.gameBoardSize.width);
+  var randomColumn = opt_gemCoordinates ? opt_gemCoordinates.column :
+      Math.floor(Math.random() * this.gameBoardSize.height);
+  while (!this.map.setGem(randomRow, randomColumn)) {
+    randomRow = Math.floor(Math.random() * this.gameBoardSize.width);
+    randomColumn = Math.floor(Math.random() * this.gameBoardSize.height);
   }
-
-  var height = Math.floor(this.gameBoardSize.height / SQUARE_SIZE);
-  var width = Math.floor(this.gameBoardSize.width / SQUARE_SIZE);
-  
-  //Make sure gem piece is not set on a piece of snake.
-  var randXCoord = xCoord || Math.floor(Math.random()*width);
-  var randYCoord = yCoord || Math.floor(Math.random()*height);
-  while (!this.map.setGem(randYCoord, randXCoord)) {
-    randXCoord = Math.floor(Math.random()*width);
-    randYCoord = Math.floor(Math.random()*height);
-  }
-  //adding gem coordinates
-  this.gemCoords.x = randXCoord;
-  this.gemCoords.y = randYCoord;
-  
-  var randHeight = randYCoord * SQUARE_SIZE;
-  var randWidth = randXCoord * SQUARE_SIZE;
+  this.gemCoordinates = new SnakeCoordinates(randomRow, randomColumn);
+  return new SnakeCoordinates(randomRow, randomColumn);
 };
 
 /**
@@ -282,22 +259,22 @@ Snake.prototype.pauseGame = function() {
 /**
  * Represents a piece of the snake.
  *
- * @param {number=} row The piece's row number.
- * @param {number=} column The piece's column number.
+ * @param {number} row The piece's row number.
+ * @param {number} column The piece's column number.
  * @constructor
  * @private
  */
 SnakeCoordinates = function(row, column) {
-  this.row = row || -1;
-  this.column = column || -1;
+  this.row = row;
+  this.column = column;
 };
 
 /**
- * Gets a deep copy of the snake coordinates.
+ * Clones the snake coordinates.
  *
- * @return {SnakeCoordinates} A deep copy of the snake coordinates.
+ * @return {SnakeCoordinates} A deep copy clone of the snake coordinates.
  */
-SnakeCoordinates.prototype.getDeepCopy = function() {
+SnakeCoordinates.prototype.clone = function() {
   return new SnakeCoordinates(this.row, this.column);
 };
 
@@ -338,10 +315,8 @@ Snake.prototype.move = function() {
       break;
   }
   if (this.gameOver = this.isGameOver(newHead)) {
-    var finalScoreNumDiv = goog.dom.getElement('finalScoreNum');
-    finalScoreNumDiv.innerHTML = this.counter;
-    var finalScoreDiv = goog.dom.getElement('finalScore');
-    finalScoreDiv.style.display = 'inline';
+    goog.dom.getElement('finalScoreNum').innerHTML = this.counter;
+    goog.dom.getElement('finalScore').style.display = 'inline';
     
     // Enable form.
     goog.dom.forms.setDisabled(this.snakeSpeedForm, false);
@@ -377,7 +352,7 @@ Snake.prototype.move = function() {
     if (this.map.gemOverlaps(newHead)) {
       this.snakeLength++;
       this.appendPieceToSnake = true;
-      this.setGemPiece();
+      this.setNewGemCoordinates();
       
       var counterDiv = goog.dom.getElement('counter');
       if (counterDiv) {
@@ -407,31 +382,18 @@ Snake.prototype.getDeepCopyQueue = function() {
 };
 
 /**
- * Gets a deep copy of the snake body pieces.
- *
- * @return {Object} A deep copy of the snake body.
- * @private
- */
-Snake.prototype.getDeepCopyGemCoords = function() {
-  return {
-    'x': this.gemCoords.x,
-    'y': this.gemCoords.y
-  }
-};
-
-/**
  * Saves the state of the snake game.
  */
 Snake.prototype.saveGame = function() {
   if (!this.gameOver) {
     this.saveGameVariables['snakeQueue'] = this.getDeepCopyQueue();
-    this.saveGameVariables['currentHead'] = this.currentHead.getDeepCopy();
+    this.saveGameVariables['currentHead'] = this.currentHead.clone();
     this.saveGameVariables['counter'] = this.counter;
     this.saveGameVariables['snakeLength'] = this.snakeLength;
     this.saveGameVariables['snakeSpeed'] = this.snakeSpeed;
     this.saveGameVariables['currentDirection'] = this.currentDirection;
     this.saveGameVariables['previousDirection'] = this.previousDirection;
-    this.saveGameVariables['gemCoords'] = this.getDeepCopyGemCoords();
+    this.saveGameVariables['gemCoordinates'] = this.gemCoordinates.clone();
   }
 };
 
@@ -444,10 +406,8 @@ Snake.prototype.loadGame = function() {
     return;
   }
     
-  //reset variables
-  goog.dom.getElement('finalScore').style.display = 'none';
+  // Reset snake variables.
   this.gameOver = false;
-  
   this.snakeQueue = this.saveGameVariables['snakeQueue'];
   this.currentHead = this.saveGameVariables['currentHead'];
   this.counter = this.saveGameVariables['counter'];
@@ -455,12 +415,12 @@ Snake.prototype.loadGame = function() {
   this.snakeSpeed = this.saveGameVariables['snakeSpeed'];
   this.currentDirection = this.saveGameVariables['currentDirection'];
   this.previousDirection = this.saveGameVariables['previousDirection'];
-  this.gemCoords = this.saveGameVariables['gemCoords'];
+  this.gemCoordinates = this.saveGameVariables['gemCoordinates'];
   // Make deep copies of the queue and coordinates again, as they may
   // be needed on the next load.
   this.saveGameVariables['snakeQueue'] = this.getDeepCopyQueue();
-  this.saveGameVariables['currentHead'] = this.currentHead.getDeepCopy();
-  this.saveGameVariables['gemCoords'] = this.getDeepCopyGemCoords();
+  this.saveGameVariables['currentHead'] = this.currentHead.clone();
+  this.saveGameVariables['gemCoordinates'] = this.gemCoordinates.clone();
   
   // Reset radio option.
   var radio = this.snakeSpeedForm.elements['snakeSpeed'];
@@ -472,15 +432,15 @@ Snake.prototype.loadGame = function() {
     }
   }
   
-  // Disable form.
+  // Reset UI variables.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
-  
+  goog.dom.getElement('finalScore').style.display = 'none';
   goog.dom.getElement('counter').innerHTML = this.counter;
 
   // Recreate game board.
   this.createGameBoard_();
-  this.map = new SnakeMap(new goog.math.Size(this.maxCoords.x, this.maxCoords.y));
-  this.setGemPiece(this.gemCoords.x, this.gemCoords.y);
+  this.map = new SnakeMap(this.gameBoardSize);
+  this.setNewGemCoordinates(this.gemCoordinates);
   goog.array.forEach(this.snakeQueue, function(coordinates) {
     if (coordinates.row === this.currentHead.row &&
         coordinates.column === this.currentHead.column) { // Set head.
