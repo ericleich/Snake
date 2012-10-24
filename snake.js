@@ -620,7 +620,7 @@ SnakeMap.piece = {
 };
 
 goog.exportSymbol('Snake', Snake);
-goog.exportSymbol('Snake.prototype.move', Snake.prototype.move);
-goog.exportSymbol('Snake.prototypesaveGame', Snake.prototype.saveGame);
-goog.exportSymbol('Snake.prototype.loadGame', Snake.prototype.loadGame);
-goog.exportSymbol('Snake.prototype.init', Snake.prototype.init);
+goog.exportProperty('Snake.prototype', 'move', Snake.prototype.move);
+goog.exportProperty('Snake.prototype', 'saveGame', Snake.prototype.saveGame);
+goog.exportProperty('Snake.prototype', 'loadGame', Snake.prototype.loadGame);
+goog.exportProperty('Snake.prototype', 'init', Snake.prototype.init);
