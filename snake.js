@@ -152,6 +152,7 @@ Snake.prototype.init = function() {
   // Reset variables.
   this.gameOver = false;
   this.gamePaused = false;
+  this.appendPieceToSnake = false;
   this.counter = 0;
   this.snakeLength = 1;
   this.currentDirection = Snake.Direction.RIGHT;
