@@ -10,6 +10,7 @@ goog.require('goog.events');
 goog.require('goog.events.EventType');
 goog.require('goog.object');
 goog.require('goog.style');
+goog.require('goog.structs.Queue');
 
 /**
  * Represents the state of the snake game.
@@ -81,7 +82,12 @@ Snake = function() {
   this.gamePaused = false;
 
   this.state = new SnakeState();
-  this.snakeQueue = [];
+  /**
+   * Represents the body of the snake. The "head" of the queue is the tail of
+   * the snake's body.
+   * @type {goog.structs.Queue}
+   */
+  this.snakeQueue = new goog.structs.Queue();
 
   // Used for loading/saving game.
   this.saveGameVariables = {};
@@ -188,7 +194,7 @@ Snake.prototype.init = function() {
   // Reset variables.
   this.state = new SnakeState();
   this.state.gameOver = false;
-  this.snakeQueue = new Array();
+  this.snakeQueue = new goog.structs.Queue();
   this.state.snakeSpeed = goog.dom.forms.getValueByName(
       this.snakeSpeedForm, 'snakeSpeed');
 
@@ -208,7 +214,7 @@ Snake.prototype.init = function() {
   var centerColumn = Math.floor(this.gameBoardSize.width / 2);
   this.currentHead = new SnakeCoordinates(centerRow, centerColumn);
   this.map.setCoordinates(this.currentHead, SnakeMap.piece.HEAD);
-  this.snakeQueue.push(this.currentHead);
+  this.snakeQueue.enqueue(this.currentHead);
   this.setNewGemCoordinates();
 
   // Start moving the snake.
@@ -377,7 +383,7 @@ Snake.prototype.move = function() {
       this.state.appendPieceToSnake = false;
     } else {
       // Remove the tail. 
-      var tail = this.snakeQueue.shift();
+      var tail = this.snakeQueue.dequeue();
       this.map.clearCoordinates(tail);
     }
     
@@ -387,7 +393,7 @@ Snake.prototype.move = function() {
       this.map.setCoordinates(this.currentHead, SnakeMap.piece.BODY);
     }
     this.map.setCoordinates(newHead, SnakeMap.piece.HEAD);
-    this.snakeQueue.push(newHead);
+    this.snakeQueue.enqueue(newHead);
 
     this.state.previousDirection = this.state.currentDirection;
     this.currentHead = newHead;
@@ -410,16 +416,14 @@ Snake.prototype.move = function() {
 /**
  * Gets a deep copy of the snake body pieces.
  *
- * @return {Array.<SnakeCoordinates>} A deep copy of the snake body.
+ * @return {goog.structs.Queue} A deep copy of the snake body.
  * @private
  */
 Snake.prototype.getDeepCopyQueue = function() {
-  var snakeQueueDeepCopy = new Array();
-  var snakeCoordinates;
-  for (var index = 0; index < this.snakeQueue.length; index++) {
-    snakeCoordinates = this.snakeQueue[index];
-    snakeQueueDeepCopy.push(snakeCoordinates.clone());
-  }
+  var snakeQueueDeepCopy = new goog.structs.Queue();
+  goog.array.forEach(this.snakeQueue.getValues(), function(coordinates) {
+    snakeQueueDeepCopy.enqueue(coordinates);
+  }, this);
   return snakeQueueDeepCopy;
 };
 
@@ -476,7 +480,8 @@ Snake.prototype.loadGame = function() {
   this.createGameBoard_();
   this.map = new SnakeMap(this.gameBoardSize);
   this.setNewGemCoordinates(this.gemCoordinates);
-  goog.array.forEach(this.snakeQueue, function(coordinates) {
+
+  goog.array.forEach(this.snakeQueue.getValues(), function(coordinates) {
     if (this.currentHead.equals(coordinates)) { // Set head.
       this.map.setCoordinates(coordinates, SnakeMap.piece.HEAD);
     } else { // Set body.
