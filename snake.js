@@ -1,5 +1,6 @@
 goog.provide('Snake');
 goog.provide('SnakeMap');
+goog.provide('SnakeState');
 
 goog.require('goog.array');
 goog.require('goog.date');
@@ -9,6 +10,56 @@ goog.require('goog.events');
 goog.require('goog.events.EventType');
 goog.require('goog.object');
 goog.require('goog.style');
+
+/**
+ * Represents the state of the snake game.
+ *
+ * @constructor
+ * @private
+ */
+SnakeState = function() {
+  this.speed = 10;
+  this.length = 1;
+  this.appendPieceToSnake = false;
+  this.currentDirection = SnakeState.Direction.RIGHT;
+  this.previousDirection = SnakeState.Direction.RIGHT;
+};
+
+/**
+ * Clones the snake's state.
+ *
+ * @return {SnakeState} A deep copy clone of the snake's state.
+ */
+SnakeState.prototype.clone = function() {
+  var clone = new SnakeState();
+  clone.speed = this.speed;
+  clone.length = this.length;
+  clone.appendPieceToSnake = this.appendPieceToSnake;
+  clone.currentDirection = this.currentDirection;
+  clone.previousDirection = this.previousDirection;
+  return clone;
+};
+
+/**
+ * Get's the snake state's score.
+ *
+ * @return {number} The score for the snake.
+ */
+SnakeState.prototype.getScore = function() {
+  return this.length - 1;
+};
+
+/**
+ * Enum for the snake's direction.
+ *
+ * @enum {number}
+ */
+SnakeState.Direction = {
+  'UP': 0,
+  'DOWN': 1,
+  'LEFT': 2,
+  'RIGHT': 3
+};
 
 /**
  * The size of the snake and gem squares.
@@ -26,15 +77,10 @@ var SQUARE_SIZE = 20;
 Snake = function() {
   this.setSnakePieceImages_();
 
-  //speed of snake in moves per second
-  this.snakeSpeed = 0;
   this.gameOver = true;
   this.gamePaused = false;
-  this.appendPieceToSnake = false;
-  this.counter = 0;
-  this.snakeLength = 1;
-  this.currentDirection = Snake.Direction.RIGHT;
-  this.previousDirection = Snake.Direction.RIGHT;
+
+  this.state = new SnakeState();
   this.snakeQueue = [];
 
   // Used for loading/saving game.
@@ -42,18 +88,6 @@ Snake = function() {
 
   // Listen for key down events.
   goog.events.listen(document, goog.events.EventType.KEYDOWN, this.handleKeyEvent, false, this);
-};
-
-/**
- * Enum for the snake's direction.
- *
- * @enum {number}
- */
-Snake.Direction = {
-  'UP': 0,
-  'DOWN': 1,
-  'LEFT': 2,
-  'RIGHT': 3
 };
 
 /**
@@ -99,23 +133,27 @@ Snake.prototype.handleKeyEvent = function(evt) {
   if (evt) {
     switch (evt.keyCode) {
       case 37:
-        if (!this.gamePaused && this.previousDirection != Snake.Direction.RIGHT) {
-          this.currentDirection = Snake.Direction.LEFT;
+        if (!this.gamePaused &&
+            this.state.previousDirection != SnakeState.Direction.RIGHT) {
+          this.state.currentDirection = SnakeState.Direction.LEFT;
         }
         break;    
       case 38:
-        if (!this.gamePaused && this.previousDirection != Snake.Direction.DOWN) {
-          this.currentDirection = Snake.Direction.UP;
+        if (!this.gamePaused &&
+            this.state.previousDirection != SnakeState.Direction.DOWN) {
+          this.state.currentDirection = SnakeState.Direction.UP;
         }
         break;    
       case 39:
-        if (!this.gamePaused && this.previousDirection != Snake.Direction.LEFT) {
-          this.currentDirection = Snake.Direction.RIGHT;
+        if (!this.gamePaused &&
+            this.state.previousDirection != SnakeState.Direction.LEFT) {
+          this.state.currentDirection = SnakeState.Direction.RIGHT;
         }
         break;    
       case 40:
-        if (!this.gamePaused && this.previousDirection != Snake.Direction.UP) {
-          this.currentDirection = Snake.Direction.DOWN;
+        if (!this.gamePaused &&
+            this.state.previousDirection != SnakeState.Direction.UP) {
+          this.state.currentDirection = SnakeState.Direction.DOWN;
         }
         break;
         
@@ -141,8 +179,6 @@ Snake.prototype.handleKeyEvent = function(evt) {
  * Initializes a new snake game.
  */
 Snake.prototype.init = function() {
-
-
   // Hold a reference to the game board div and snake speed form,
   // as they're used often.
   this.gameBoardDiv = goog.dom.getElement('gameBoard');
@@ -150,19 +186,16 @@ Snake.prototype.init = function() {
       /** @type {HTMLFormElement} */ (goog.dom.getElement('snakeSpeedForm'));
   
   // Reset variables.
-  this.gameOver = false;
-  this.gamePaused = false;
-  this.appendPieceToSnake = false;
-  this.counter = 0;
-  this.snakeLength = 1;
-  this.currentDirection = Snake.Direction.RIGHT;
+  this.state = new SnakeState();
+  this.state.gameOver = false;
   this.snakeQueue = new Array();
-  this.snakeSpeed = goog.dom.forms.getValueByName(this.snakeSpeedForm, 'snakeSpeed');
+  this.state.snakeSpeed = goog.dom.forms.getValueByName(
+      this.snakeSpeedForm, 'snakeSpeed');
 
   // Reset UI elements.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
   goog.dom.getElement('finalScore').style.display = 'none';
-  goog.dom.getElement('counter').innerHTML = this.counter;
+  goog.dom.getElement('counter').innerHTML = this.state.getScore();
 
   // Set up game board.
   var gameBoardDivSize = goog.style.getContentBoxSize(this.gameBoardDiv);
@@ -247,7 +280,7 @@ Snake.prototype.pauseGame = function() {
       pauseButton.value = "Pause";
     }
     goog.dom.getElement('pauseGameOverlay').style.display = "none";
-    setTimeout('snake.move()', 1000/this.snakeSpeed);
+    setTimeout('snake.move()', 1000/this.state.speed);
   } else {
     this.gamePaused = true;
     if (pauseButton) {
@@ -300,23 +333,24 @@ Snake.prototype.move = function() {
   if (this.gamePaused) {
     return;
   }
-  var newHead = new SnakeCoordinates(this.currentHead.row, this.currentHead.column);
-  switch (this.currentDirection) {
-    case Snake.Direction.LEFT:
+  var newHead = new SnakeCoordinates(this.currentHead.row,
+                                     this.currentHead.column);
+  switch (this.state.currentDirection) {
+    case SnakeState.Direction.LEFT:
       newHead.column--;
       break;
-    case Snake.Direction.UP:
+    case SnakeState.Direction.UP:
       newHead.row--;
       break;
-    case Snake.Direction.RIGHT:
+    case SnakeState.Direction.RIGHT:
       newHead.column++;
       break;
-    case Snake.Direction.DOWN:
+    case SnakeState.Direction.DOWN:
       newHead.row++;
       break;
   }
   if (this.gameOver = this.isGameOver(newHead)) {
-    goog.dom.getElement('finalScoreNum').innerHTML = this.counter;
+    goog.dom.getElement('finalScoreNum').innerHTML = this.state.getScore();
     goog.dom.getElement('finalScore').style.display = 'inline';
     
     // Enable form.
@@ -324,43 +358,43 @@ Snake.prototype.move = function() {
 
     var previousScoresTextDiv = goog.dom.createElement('div');
     previousScoresTextDiv.className = 'previous-scores-text';
-    previousScoresTextDiv.innerHTML = this.counter;
+    previousScoresTextDiv.innerHTML = this.state.getScore();
     var previousScoresDiv = goog.dom.getElement('previousScores');
     goog.dom.appendChild(previousScoresDiv, previousScoresTextDiv);
   } else {
 
-    if (this.appendPieceToSnake) {
+    if (this.state.appendPieceToSnake) {
       // Gem accounted for.
-      this.appendPieceToSnake = false;
+      this.state.appendPieceToSnake = false;
     } else {
-      // Remove the tail.
+      // Remove the tail. 
       var tail = this.snakeQueue.shift();
       this.map.clearCoordinates(tail);
     }
     
     // Set snake head.
-    if (this.snakeLength !== 1) {
+    if (this.state.length !== 1) {
       // Ensures current head is not also the tail.
       this.map.setCoordinates(this.currentHead, SnakeMap.piece.BODY);
     }
     this.map.setCoordinates(newHead, SnakeMap.piece.HEAD);
     this.snakeQueue.push(newHead);
 
-    this.previousDirection = this.currentDirection;
+    this.state.previousDirection = this.state.currentDirection;
     this.currentHead = newHead;
     
     // Check if gem was found.
     if (this.map.gemOverlaps(newHead)) {
-      this.snakeLength++;
-      this.appendPieceToSnake = true;
+      this.state.length++;
+      this.state.appendPieceToSnake = true;
       this.setNewGemCoordinates();
       
       var counterDiv = goog.dom.getElement('counter');
       if (counterDiv) {
-        counterDiv.innerHTML = ++this.counter;
+        counterDiv.innerHTML = this.state.getScore();
       }
     }
-    setTimeout('snake.move()', 1000/this.snakeSpeed);
+    setTimeout('snake.move()', 1000/this.state.speed);
   } 
 };
 
@@ -388,12 +422,8 @@ Snake.prototype.getDeepCopyQueue = function() {
 Snake.prototype.saveGame = function() {
   if (!this.gameOver) {
     this.saveGameVariables['snakeQueue'] = this.getDeepCopyQueue();
+    this.saveGameVariables['state'] = this.state.clone();
     this.saveGameVariables['currentHead'] = this.currentHead.clone();
-    this.saveGameVariables['counter'] = this.counter;
-    this.saveGameVariables['snakeLength'] = this.snakeLength;
-    this.saveGameVariables['snakeSpeed'] = this.snakeSpeed;
-    this.saveGameVariables['currentDirection'] = this.currentDirection;
-    this.saveGameVariables['previousDirection'] = this.previousDirection;
     this.saveGameVariables['gemCoordinates'] = this.gemCoordinates.clone();
   }
 };
@@ -403,7 +433,7 @@ Snake.prototype.saveGame = function() {
  * before a new game can be loaded.
  */
 Snake.prototype.loadGame = function() {
-  if (!this.gameOver || goog.object.getCount(this.saveGameVariables) != 8) { 
+  if (!this.gameOver || goog.object.getCount(this.saveGameVariables) != 4) { 
     return;
   }
     
@@ -411,22 +441,19 @@ Snake.prototype.loadGame = function() {
   this.gameOver = false;
   this.snakeQueue = this.saveGameVariables['snakeQueue'];
   this.currentHead = this.saveGameVariables['currentHead'];
-  this.counter = this.saveGameVariables['counter'];
-  this.snakeLength = this.saveGameVariables['snakeLength'];
-  this.snakeSpeed = this.saveGameVariables['snakeSpeed'];
-  this.currentDirection = this.saveGameVariables['currentDirection'];
-  this.previousDirection = this.saveGameVariables['previousDirection'];
+  this.state = this.saveGameVariables['state'];
   this.gemCoordinates = this.saveGameVariables['gemCoordinates'];
   // Make deep copies of the queue and coordinates again, as they may
   // be needed on the next load.
   this.saveGameVariables['snakeQueue'] = this.getDeepCopyQueue();
   this.saveGameVariables['currentHead'] = this.currentHead.clone();
+  this.saveGameVariables['state'] = this.state.clone();
   this.saveGameVariables['gemCoordinates'] = this.gemCoordinates.clone();
   
   // Reset radio option.
   var radio = this.snakeSpeedForm.elements['snakeSpeed'];
   for (var index = 0; index < radio.length; index++) {
-    if (parseInt(radio[index].value, 10) != this.snakeSpeed) {
+    if (parseInt(radio[index].value, 10) != this.state.speed) {
       radio[index].checked = false;
     } else {
       radio[index].checked = true;
@@ -436,7 +463,7 @@ Snake.prototype.loadGame = function() {
   // Reset UI variables.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
   goog.dom.getElement('finalScore').style.display = 'none';
-  goog.dom.getElement('counter').innerHTML = this.counter;
+  goog.dom.getElement('counter').innerHTML = this.state.getScore();
 
   // Recreate game board.
   this.createGameBoard_();
@@ -472,7 +499,7 @@ SnakeMap = function(size) {
    * @private
    */
   this.map_ = new Array();
-  for (var index = 0; index < size.height; index++) {
+  for (var index = 0; index < this.size.height; index++) {
     this.map_[index] = new Array();
   }
 
@@ -621,7 +648,8 @@ SnakeMap.piece = {
 };
 
 goog.exportSymbol('Snake', Snake);
-goog.exportProperty('Snake.prototype', 'move', Snake.prototype.move);
-goog.exportProperty('Snake.prototype', 'saveGame', Snake.prototype.saveGame);
-goog.exportProperty('Snake.prototype', 'loadGame', Snake.prototype.loadGame);
-goog.exportProperty('Snake.prototype', 'init', Snake.prototype.init);
+goog.exportSymbol('SnakeState', SnakeState);
+goog.exportProperty(Snake.prototype, 'move', Snake.prototype.move);
+goog.exportProperty(Snake.prototype, 'saveGame', Snake.prototype.saveGame);
+goog.exportProperty(Snake.prototype, 'loadGame', Snake.prototype.loadGame);
+goog.exportProperty(Snake.prototype, 'init', Snake.prototype.init);
