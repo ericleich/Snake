@@ -313,6 +313,16 @@ SnakeCoordinates.prototype.clone = function() {
 };
 
 /**
+ * Compares two SnakeCoordinates.
+ *
+ * @param {SnakeCoordinates} other The other SnakeCoordinates to compare.
+ * @return {boolean} Whether or not the snake coordinates are equal.
+ */
+SnakeCoordinates.prototype.equals = function(other) {
+  return this.row === other.row && this.column === other.column;
+};
+
+/**
  * Checks if the snake went out of bounds or ran into itself.
  *
  * @param {SnakeCoordinates} newHeadCoordinates The coordinates of
@@ -333,8 +343,7 @@ Snake.prototype.move = function() {
   if (this.gamePaused) {
     return;
   }
-  var newHead = new SnakeCoordinates(this.currentHead.row,
-                                     this.currentHead.column);
+  var newHead = this.currentHead.clone();
   switch (this.state.currentDirection) {
     case SnakeState.Direction.LEFT:
       newHead.column--;
@@ -409,9 +418,7 @@ Snake.prototype.getDeepCopyQueue = function() {
   var snakeCoordinates;
   for (var index = 0; index < this.snakeQueue.length; index++) {
     snakeCoordinates = this.snakeQueue[index];
-    snakeQueueDeepCopy.push(
-        new SnakeCoordinates(snakeCoordinates.row,
-                             snakeCoordinates.column));
+    snakeQueueDeepCopy.push(snakeCoordinates.clone());
   }
   return snakeQueueDeepCopy;
 };
@@ -470,8 +477,7 @@ Snake.prototype.loadGame = function() {
   this.map = new SnakeMap(this.gameBoardSize);
   this.setNewGemCoordinates(this.gemCoordinates);
   goog.array.forEach(this.snakeQueue, function(coordinates) {
-    if (coordinates.row === this.currentHead.row &&
-        coordinates.column === this.currentHead.column) { // Set head.
+    if (this.currentHead.equals(coordinates)) { // Set head.
       this.map.setCoordinates(coordinates, SnakeMap.piece.HEAD);
     } else { // Set body.
       this.map.setCoordinates(coordinates, SnakeMap.piece.BODY);
