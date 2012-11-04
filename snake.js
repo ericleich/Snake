@@ -3,10 +3,10 @@ goog.provide('SnakeManager');
 goog.provide('SnakeMap');
 goog.provide('SnakeState');
 
-
 goog.require('goog.array');
 goog.require('goog.date');
 goog.require('goog.dom');
+goog.require('goog.dom.classes');
 goog.require('goog.dom.forms');
 goog.require('goog.events');
 goog.require('goog.events.EventType');
@@ -108,7 +108,7 @@ SnakeManager.prototype.startGame = function() {
   // Reset UI elements.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
   goog.dom.getElement('finalScore').style.display = 'none';
-  goog.dom.getElement('counter').innerHTML = 0;
+  goog.dom.setTextContent(goog.dom.getElement('counter'), 0);
 
   // Set up game board.
   var gameBoardDivSize = goog.style.getContentBoxSize(this.gameBoardDiv);
@@ -139,16 +139,15 @@ SnakeManager.prototype.createGameBoard_ = function() {
 
   var gamePieceRow, gamePieceDiv;
   for (var i = 0; i < this.gameBoardSize.height; i++) {
-    gamePieceRow = goog.dom.createElement('div');
+    gamePieceRow = goog.dom.createElement(goog.dom.TagName.DIV);
     gamePieceRow.id = 'row' + i;
-    gamePieceRow.style.display = 'block';
     for (var j = 0; j < this.gameBoardSize.width; j++) {
       // Create a div to hold a game piece.
-      gamePieceDiv = goog.dom.createElement('div');
+      gamePieceDiv = goog.dom.createElement(goog.dom.TagName.DIV);
       gamePieceDiv.id = 'spot' + i + '-' + j;
-      gamePieceDiv.style.width = SQUARE_SIZE;
-      gamePieceDiv.style.height = SQUARE_SIZE;
-      gamePieceDiv.style.display = 'inline-block';
+      goog.style.setHeight(gamePieceDiv, SQUARE_SIZE);
+      goog.style.setWidth(gamePieceDiv, SQUARE_SIZE);
+      goog.style.setInlineBlock(gamePieceDiv);
       goog.dom.appendChild(gamePieceRow, gamePieceDiv);
     }
     goog.dom.appendChild(this.gameBoardDiv, gamePieceRow);
@@ -191,7 +190,8 @@ SnakeManager.prototype.move = function() {
       this.nofityGameOver();
       return;
     case SnakeMap.piece.GEM:
-      goog.dom.getElement('counter').innerHTML = this.snake.getScore() + 1;
+      goog.dom.setTextContent(
+          goog.dom.getElement('counter'), this.snake.getScore() + 1);
       this.setNewGemCoordinates();
       break;
     default:
@@ -209,7 +209,7 @@ SnakeManager.prototype.move = function() {
     this.nofityGameOver();
   } else {
     this.snake.lockInDirections();
-    setTimeout('snakeManager.move()', 1000/this.snakeSpeed);
+    //setTimeout('snakeManager.move()', 1000/this.snakeSpeed);
   }
 };
 
@@ -230,15 +230,16 @@ SnakeManager.prototype.isGameOver = function(newHeadCoordinates) {
  */
 SnakeManager.prototype.nofityGameOver = function() {
   this.gameOver = true;
-  goog.dom.getElement('finalScoreNum').innerHTML = this.snake.getScore();
-  goog.dom.getElement('finalScore').style.display = 'inline';
+  goog.dom.setTextContent(
+      goog.dom.getElement('finalScoreNum'), this.snake.getScore());
+  goog.style.setInlineBlock(goog.dom.getElement('finalScore'));
   
   // Enable form.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, false);
 
-  var previousScoresTextDiv = goog.dom.createElement('div');
-  previousScoresTextDiv.className = 'previous-scores-text';
-  previousScoresTextDiv.innerHTML = this.snake.getScore();
+  var previousScoresTextDiv = goog.dom.createElement(goog.dom.TagName.DIV);
+  goog.dom.classes.set(previousScoresTextDiv, 'previous-scores-text');
+  goog.dom.setTextContent(previousScoresTextDiv, this.snake.getScore());
   var previousScoresDiv = goog.dom.getElement('previousScores');
   goog.dom.appendChild(previousScoresDiv, previousScoresTextDiv);
 };
@@ -287,7 +288,8 @@ SnakeManager.prototype.loadGame = function() {
   // Reset UI variables.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
   goog.dom.getElement('finalScore').style.display = 'none';
-  goog.dom.getElement('counter').innerHTML = this.snake.getScore();
+  goog.dom.setTextContent(
+      goog.dom.getElement('counter'), this.snake.getScore());
 
   // Recreate game board.
   this.createGameBoard_();
@@ -351,10 +353,10 @@ Snake = function(id) {
  * @enum {number}
  */
 Snake.Direction = {
-  'UP': 0,
-  'DOWN': 1,
-  'LEFT': 2,
-  'RIGHT': 3
+  'UP': 1,
+  'DOWN': 2,
+  'LEFT': 3,
+  'RIGHT': 4
 };
 
 /**
