@@ -108,7 +108,7 @@ SnakeManager.prototype.startGame = function() {
   // Reset UI elements.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
   goog.dom.getElement('finalScore').style.display = 'none';
-  goog.dom.setTextContent(goog.dom.getElement('counter'), 0);
+  goog.dom.setTextContent(goog.dom.getElement('counter'), '0');
 
   // Set up game board.
   var gameBoardDivSize = goog.style.getContentBoxSize(this.gameBoardDiv);
@@ -191,7 +191,7 @@ SnakeManager.prototype.move = function() {
       return;
     case SnakeMap.piece.GEM:
       goog.dom.setTextContent(
-          goog.dom.getElement('counter'), this.snake.getScore() + 1);
+          goog.dom.getElement('counter'), (this.snake.getScore() + 1) + "");
       this.setNewGemCoordinates();
       break;
     default:
@@ -231,7 +231,7 @@ SnakeManager.prototype.isGameOver = function(newHeadCoordinates) {
 SnakeManager.prototype.nofityGameOver = function() {
   this.gameOver = true;
   goog.dom.setTextContent(
-      goog.dom.getElement('finalScoreNum'), this.snake.getScore());
+      goog.dom.getElement('finalScoreNum'), this.snake.getScore() + "");
   goog.style.setInlineBlock(goog.dom.getElement('finalScore'));
   
   // Enable form.
@@ -239,7 +239,7 @@ SnakeManager.prototype.nofityGameOver = function() {
 
   var previousScoresTextDiv = goog.dom.createElement(goog.dom.TagName.DIV);
   goog.dom.classes.set(previousScoresTextDiv, 'previous-scores-text');
-  goog.dom.setTextContent(previousScoresTextDiv, this.snake.getScore());
+  goog.dom.setTextContent(previousScoresTextDiv, this.snake.getScore() + "");
   var previousScoresDiv = goog.dom.getElement('previousScores');
   goog.dom.appendChild(previousScoresDiv, previousScoresTextDiv);
 };
@@ -289,7 +289,7 @@ SnakeManager.prototype.loadGame = function() {
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
   goog.dom.getElement('finalScore').style.display = 'none';
   goog.dom.setTextContent(
-      goog.dom.getElement('counter'), this.snake.getScore());
+      goog.dom.getElement('counter'), this.snake.getScore() + "");
 
   // Recreate game board.
   this.createGameBoard_();
