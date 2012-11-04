@@ -209,7 +209,7 @@ SnakeManager.prototype.move = function() {
     this.nofityGameOver();
   } else {
     this.snake.lockInDirections();
-    //setTimeout('snakeManager.move()', 1000/this.snakeSpeed);
+    setTimeout('snakeManager.move()', 1000/this.snakeSpeed);
   }
 };
 
