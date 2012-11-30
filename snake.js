@@ -96,7 +96,7 @@ SnakeManager.prototype.startGame = function() {
   // as they're used often.
   this.gameBoardDiv = goog.dom.getElement('gameBoard');
   this.snakeSpeedForm =
-      /** @type {HTMLFormElement} */ (goog.dom.getElement('snakeSpeedForm'));
+      /** @type {HTMLFormElement} */ (goog.dom   .getElement('snakeSpeedForm'));
   
   // Reset variables.
   this.gameOver = false;
@@ -183,32 +183,29 @@ SnakeManager.prototype.move = function() {
     return;
   }
 
-  var newHeadCoordinates = this.snake.getNewHeadCoordinates();
+  var newHeadCoordinates = this.snake.move();
   switch (this.map.getPiece(newHeadCoordinates)) {
     case SnakeMap.piece.UNKNOWN:
+      // Potential corner case in multiplayer - snake dies but tail is still
+      // there. Don't want to clear in 1 player mode though, so comment for now.
+      // this.map.clearCoordinates(this.snake.removeTail());
       // Don't show piece going over the edge.
-      this.nofityGameOver();
+      this.notifyGameOver();
       return;
     case SnakeMap.piece.GEM:
       goog.dom.setTextContent(
-          goog.dom.getElement('counter'), (this.snake.getScore() + 1) + "");
+          goog.dom.getElement('counter'), (this.snake.getScore()) + "");
       this.setNewGemCoordinates();
       break;
     default:
       this.map.clearCoordinates(this.snake.removeTail());
   }
 
-  // Let the snake know to append the new piece.
-  var oldHeadCoordinates = this.snake.append(newHeadCoordinates);
-  if (oldHeadCoordinates && this.snake.getLength() > 1) {
-    this.map.setCoordinates(oldHeadCoordinates, SnakeMap.piece.BODY);
-  }
   var oldPiece = this.map.setCoordinates(
       newHeadCoordinates, SnakeMap.piece.HEAD);
   if (oldPiece === SnakeMap.piece.BODY || oldPiece === SnakeMap.piece.HEAD) {
-    this.nofityGameOver();
+    this.notifyGameOver();
   } else {
-    this.snake.lockInDirections();
     setTimeout('snakeManager.move()', 1000/this.snakeSpeed);
   }
 };
@@ -228,7 +225,7 @@ SnakeManager.prototype.isGameOver = function(newHeadCoordinates) {
 /**
  * Notifies the UI that the game is over.
  */
-SnakeManager.prototype.nofityGameOver = function() {
+SnakeManager.prototype.notifyGameOver = function() {
   this.gameOver = true;
   goog.dom.setTextContent(
       goog.dom.getElement('finalScoreNum'), this.snake.getScore() + "");
@@ -500,13 +497,31 @@ Snake.prototype.changeDirection = function(keyCode) {
 };
 
 /**
- * Updates the snake's previous directions.
- * TODO: This should be done internally. The SnakeManager should not
- *       need to know about this.
+ * Moves the snake one space in the current direction.
+ *
+ * @return {SnakeCoordinates} The new head coordinates.
  */
-Snake.prototype.lockInDirections = function() {
+Snake.prototype.move = function() {
+  var newHead = this.head.clone();
+  switch (this.currentDirection) {
+    case Snake.Direction.LEFT:
+      newHead.column--;
+      break;
+    case Snake.Direction.UP:
+      newHead.row--;
+      break;
+    case Snake.Direction.RIGHT:
+      newHead.column++;
+      break;
+    case Snake.Direction.DOWN:
+      newHead.row++;
+      break;
+  }
+  this.head = newHead;
+  this.snakeQueue.enqueue(newHead);
   this.previousDirection = this.currentDirection;
-};
+  return newHead;
+}
 
 /**
  * Gets the snakes desired new head coordinates. THe snake returns the
@@ -630,22 +645,33 @@ SnakeMap.prototype.getPiece = function(coordinates) {
 };
 
 /**
- * Sets the map value to the given piece for the provided position.
+ * Sets the map value to the given piece for the provided position. If
+ * setting the head piece, the old head will be set to a body piece.
  *
  * @param {SnakeCoordinates} coordinates The coordinates to set.
+ * @param {SnakeMap.piece} The piece to set in that coordinate position.
  * @return {SnakeMap.piece} The old piece in that coordinate position.
  */
 SnakeMap.prototype.setCoordinates = function(coordinates, piece) {
   var oldPiece = this.getPiece(coordinates);
   if (this.coordinatesInBounds_(coordinates)) {
     this.map_[coordinates.row][coordinates.column] = piece;
-    var pieceDiv = goog.dom.getElement('spot' + coordinates.row + '-' + coordinates.column);
+    var pieceDiv = goog.dom.getElement('spot' + coordinates.row + '-' +
+        coordinates.column);
     switch (piece) {
       case SnakeMap.piece.EMPTY:
         pieceDiv.style.backgroundImage = '';
         break;
       case SnakeMap.piece.HEAD:
         pieceDiv.style.backgroundImage = this.headUrl;
+        // Set old head to body.
+        if (this.headCoordinates &&
+            this.getPiece(this.headCoordinates) === SnakeMap.piece.HEAD) {
+          var oldHeadDiv = goog.dom.getElement('spot' +
+            this.headCoordinates.row + '-' + this.headCoordinates.column);
+          oldHeadDiv.style.backgroundImage = this.bodyUrl;
+        }
+        this.headCoordinates = coordinates;
         break;
       case SnakeMap.piece.BODY:
         pieceDiv.style.backgroundImage = this.bodyUrl;
