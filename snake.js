@@ -37,7 +37,7 @@ SnakeManager = function() {
   this.gemCoordinates = null;
 
   /** Currently assumes one snake. Make an array to support multiple snakes. */
-  this.snake = new Snake(1);
+  this.snake = null;
 
   /** Used for saving/loading game. */
   this.hasSavedGame = false;
@@ -96,14 +96,13 @@ SnakeManager.prototype.startGame = function() {
   // as they're used often.
   this.gameBoardDiv = goog.dom.getElement('gameBoard');
   this.snakeSpeedForm =
-      /** @type {HTMLFormElement} */ (goog.dom   .getElement('snakeSpeedForm'));
+      /** @type {HTMLFormElement} */ (goog.dom.getElement('snakeSpeedForm'));
   
   // Reset variables.
   this.gameOver = false;
   this.gamePaused = false;
   this.snakeSpeed = goog.dom.forms.getValueByName(
       this.snakeSpeedForm, 'snakeSpeed');
-  this.snake = new Snake(1);
 
   // Reset UI elements.
   goog.dom.forms.setDisabled(this.snakeSpeedForm, true);
@@ -120,8 +119,8 @@ SnakeManager.prototype.startGame = function() {
   var centerRow = Math.floor(this.gameBoardSize.height / 2);
   var centerColumn = Math.floor(this.gameBoardSize.width / 2);
   var headCoordinates = new SnakeCoordinates(centerRow, centerColumn);
-  this.map.setCoordinates(headCoordinates, SnakeMap.piece.HEAD);
-  this.snake.append(headCoordinates);
+  this.map.setPiece(SnakeMap.piece.HEAD, headCoordinates);
+  this.snake = new Snake(1, headCoordinates);
   this.setNewGemCoordinates();
 
   // Start moving the snake.
@@ -186,10 +185,13 @@ SnakeManager.prototype.move = function() {
   var newHeadCoordinates = this.snake.move();
   switch (this.map.getPiece(newHeadCoordinates)) {
     case SnakeMap.piece.UNKNOWN:
-      // Potential corner case in multiplayer - snake dies but tail is still
-      // there. Don't want to clear in 1 player mode though, so comment for now.
-      // this.map.clearCoordinates(this.snake.removeTail());
-      // Don't show piece going over the edge.
+      // Potential corner case in multiplayer - snake outside game board
+      // but tail is still in the map. Don't want to clear the map in
+      // 1-player mode though, so just remove the tail under the hood.
+      this.snake.removeTail()
+      // this.map.clear(this.snake.removeTail());
+
+      // End game before displaying coordinates out of bounds.
       this.notifyGameOver();
       return;
     case SnakeMap.piece.GEM:
@@ -198,12 +200,12 @@ SnakeManager.prototype.move = function() {
       this.setNewGemCoordinates();
       break;
     default:
-      this.map.clearCoordinates(this.snake.removeTail());
+      this.map.clear(this.snake.removeTail());
   }
 
-  var oldPiece = this.map.setCoordinates(
-      newHeadCoordinates, SnakeMap.piece.HEAD);
+  var oldPiece = this.map.setPiece(SnakeMap.piece.HEAD, newHeadCoordinates);
   if (oldPiece === SnakeMap.piece.BODY || oldPiece === SnakeMap.piece.HEAD) {
+    // Snake ran into itself or another snake.
     this.notifyGameOver();
   } else {
     setTimeout('snakeManager.move()', 1000/this.snakeSpeed);
@@ -295,9 +297,9 @@ SnakeManager.prototype.loadGame = function() {
 
   goog.array.forEach(this.snake.getValues(), function(coordinates) {
     if (this.snake.isHead(coordinates)) {
-      this.map.setCoordinates(coordinates, SnakeMap.piece.HEAD);
+      this.map.setPiece(SnakeMap.piece.HEAD, coordinates);
     } else {
-      this.map.setCoordinates(coordinates, SnakeMap.piece.BODY);
+      this.map.setPiece(SnakeMap.piece.BODY, coordinates);
     }
   }, this);
   
@@ -327,21 +329,27 @@ SnakeManager.prototype.pauseGame = function() {
  * Creates a snake object.
  *
  * @param {number} id The snake's id.
+ * @param {SnakeCoordinates} head The head piece of the snake.
  * @constructor
  */
-Snake = function(id) {
-  this.setSnakePieceImages_();
-  
+Snake = function(id, head) {
+  /**
+   * The id of the snake.
+   * @type {number}
+   */
   this.id = id;
+  this.setSnakePieceImages_();
+
   this.currentDirection = Snake.Direction.RIGHT;
   this.previousDirection = Snake.Direction.RIGHT;
-  this.head = null;
+  this.head = head;
   /**
    * Represents the body of the snake. The "head" of the queue is the tail of
    * the snake's body.
    * @type {goog.structs.Queue}
    */
   this.snakeQueue = new goog.structs.Queue();
+  this.snakeQueue.enqueue(head);
 };
 
 /**
@@ -362,7 +370,7 @@ Snake.Direction = {
  * @return {Snake} The snake's clone.
  */
 Snake.prototype.clone = function() {
-  var clone = new Snake(this.id);
+  var clone = new Snake(this.id, this.head);
   clone.currentDirection = this.currentDirection;
   clone.previousDirection = this.previousDirection;
   clone.snakeQueue = new goog.structs.Queue();
@@ -406,7 +414,7 @@ Snake.prototype.getValues = function() {
  * @return {boolean} Whether or not the coordinates represent the head.
  */
 Snake.prototype.isHead = function(coordinates) {
-  return this.head && this.head.equals(coordinates);
+  return this.head !== undefined && this.head.equals(coordinates);
 };
 
 
@@ -524,31 +532,6 @@ Snake.prototype.move = function() {
 }
 
 /**
- * Gets the snakes desired new head coordinates. THe snake returns the
- * coordinates representing where it would like to move.
- *
- * @return {SnakeCoordinates} The new desired head coordinates.
- */
-Snake.prototype.getNewHeadCoordinates = function() {
-  var newHead = this.head.clone();
-  switch (this.currentDirection) {
-    case Snake.Direction.LEFT:
-      newHead.column--;
-      break;
-    case Snake.Direction.UP:
-      newHead.row--;
-      break;
-    case Snake.Direction.RIGHT:
-      newHead.column++;
-      break;
-    case Snake.Direction.DOWN:
-      newHead.row++;
-      break;
-  }
-  return newHead;
-}
-
-/**
  * Represents a piece of the snake.
  *
  * @param {number} row The piece's row number.
@@ -645,14 +628,15 @@ SnakeMap.prototype.getPiece = function(coordinates) {
 };
 
 /**
- * Sets the map value to the given piece for the provided position. If
- * setting the head piece, the old head will be set to a body piece.
+ * Sets the map value to the given piece for the provided coordinates.
+ * If setting the head piece, the old head will be set to a body piece.
  *
+ * @param {SnakeMap.piece} piece The piece to set in that coordinate
+                           position.
  * @param {SnakeCoordinates} coordinates The coordinates to set.
- * @param {SnakeMap.piece} The piece to set in that coordinate position.
  * @return {SnakeMap.piece} The old piece in that coordinate position.
  */
-SnakeMap.prototype.setCoordinates = function(coordinates, piece) {
+SnakeMap.prototype.setPiece = function(piece, coordinates) {
   var oldPiece = this.getPiece(coordinates);
   if (this.coordinatesInBounds_(coordinates)) {
     this.map_[coordinates.row][coordinates.column] = piece;
@@ -676,9 +660,6 @@ SnakeMap.prototype.setCoordinates = function(coordinates, piece) {
       case SnakeMap.piece.BODY:
         pieceDiv.style.backgroundImage = this.bodyUrl;
         break;
-      case SnakeMap.piece.GEM:
-        pieceDiv.style.backgroundImage = this.gemUrl;
-        break;
     }
   }
   return oldPiece;
@@ -689,10 +670,11 @@ SnakeMap.prototype.setCoordinates = function(coordinates, piece) {
  *
  * @param {SnakeCoordinates} coordinates The coordinates to clear.
  */
-SnakeMap.prototype.clearCoordinates = function(coordinates) {
+SnakeMap.prototype.clear = function(coordinates) {
   if (this.coordinatesInBounds_(coordinates)) {
     this.map_[coordinates.row][coordinates.column] = SnakeMap.piece.EMPTY;
-    goog.dom.getElement('spot' + coordinates.row + '-' + coordinates.column).style.backgroundImage = '';
+    goog.dom.getElement('spot' + coordinates.row + '-' + coordinates.column)
+        .style.backgroundImage = '';
   }
 };
 
