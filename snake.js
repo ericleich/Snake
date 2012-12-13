@@ -2,6 +2,7 @@ goog.provide('Snake');
 goog.provide('SnakeManager');
 goog.provide('SnakeMap');
 goog.provide('SnakeState');
+goog.provide('SnakePiece');
 
 goog.require('goog.array');
 goog.require('goog.date');
@@ -119,7 +120,7 @@ SnakeManager.prototype.startGame = function() {
   var centerRow = Math.floor(this.gameBoardSize.height / 2);
   var centerColumn = Math.floor(this.gameBoardSize.width / 2);
   var headCoordinates = new SnakeCoordinates(centerRow, centerColumn);
-  this.map.setPiece(SnakeMap.piece.HEAD, headCoordinates);
+  this.map.setPiece(SnakePiece.type.HEAD, headCoordinates);
   this.snake = new Snake(1, headCoordinates);
   this.setNewGemCoordinates();
 
@@ -167,12 +168,12 @@ SnakeManager.prototype.setNewGemCoordinates = function(opt_gemCoordinates) {
   var gemColumn = opt_gemCoordinates ? opt_gemCoordinates.column :
       Math.floor(Math.random() * this.gameBoardSize.height);
   var gemCoordinates = new SnakeCoordinates(gemRow, gemColumn);
-  while (this.map.getPiece(gemCoordinates) != SnakeMap.piece.EMPTY) {
+  while (this.map.getPiece(gemCoordinates) != SnakePiece.type.EMPTY) {
     gemCoordinates.row = Math.floor(Math.random() * this.gameBoardSize.width);
     gemCoordinates.column = Math.floor(Math.random() *
         this.gameBoardSize.height);
   }
-  this.map.setPiece(SnakeMap.piece.GEM, gemCoordinates);
+  this.map.setPiece(SnakePiece.type.GEM, gemCoordinates);
   this.gemCoordinates = gemCoordinates;
 };
 
@@ -187,17 +188,17 @@ SnakeManager.prototype.move = function() {
 
   var newHeadCoordinates = this.snake.move();
   switch (this.map.getPiece(newHeadCoordinates)) {
-    case SnakeMap.piece.UNKNOWN:
+    case SnakePiece.type.UNKNOWN:
       // Potential corner case in multiplayer - snake outside game board
       // but tail is still in the map. Don't want to clear the map in
       // 1-player mode though, so just remove the tail under the hood.
-      this.snake.removeTail()
+      this.snake.removeTail();
       // this.map.clear(this.snake.removeTail());
 
       // End game before displaying coordinates out of bounds.
       this.notifyGameOver();
       return;
-    case SnakeMap.piece.GEM:
+    case SnakePiece.type.GEM:
       goog.dom.setTextContent(
           goog.dom.getElement('counter'), (this.snake.getScore()) + "");
       this.setNewGemCoordinates();
@@ -206,8 +207,8 @@ SnakeManager.prototype.move = function() {
       this.map.clear(this.snake.removeTail());
   }
 
-  var oldPiece = this.map.setPiece(SnakeMap.piece.HEAD, newHeadCoordinates);
-  if (oldPiece === SnakeMap.piece.BODY || oldPiece === SnakeMap.piece.HEAD) {
+  var oldPiece = this.map.setPiece(SnakePiece.type.HEAD, newHeadCoordinates);
+  if (oldPiece === SnakePiece.type.BODY || oldPiece === SnakePiece.type.HEAD) {
     // Snake ran into itself or another snake.
     this.notifyGameOver();
   } else {
@@ -225,7 +226,7 @@ SnakeManager.prototype.move = function() {
  */
 SnakeManager.prototype.isGameOver = function(newHeadCoordinates) {
   var piece = this.map.getPiece(newHeadCoordinates);
-  return piece === SnakeMap.piece.EMPTY || piece === SnakeMap.piece.GEM;
+  return piece === SnakePiece.type.EMPTY || piece === SnakePiece.type.GEM;
 };
 
 /**
@@ -301,9 +302,9 @@ SnakeManager.prototype.loadGame = function() {
 
   goog.array.forEach(this.snake.getValues(), function(coordinates) {
     if (this.snake.isHead(coordinates)) {
-      this.map.setPiece(SnakeMap.piece.HEAD, coordinates);
+      this.map.setPiece(SnakePiece.type.HEAD, coordinates);
     } else {
-      this.map.setPiece(SnakeMap.piece.BODY, coordinates);
+      this.map.setPiece(SnakePiece.type.BODY, coordinates);
     }
   }, this);
   
@@ -371,7 +372,7 @@ Snake.Direction = {
 /**
  * Clones a snake.
  *
- * @return {Snake} The snake's clone.
+ * @return {Snake} A clone of the snake.
  */
 Snake.prototype.clone = function() {
   var clone = new Snake(this.id, this.head);
@@ -568,8 +569,7 @@ SnakeCoordinates.prototype.equals = function(other) {
 };
 
 /**
- * Represents the map of the snake game. Is also responsible for showing
- * snake piece elements on the screen.
+ * Represents the map of the snake game.
  *
  * @param {goog.math.Size} size The size of the map.
  * @constructor
@@ -588,87 +588,48 @@ SnakeMap = function(size) {
   for (var index = 0; index < this.size.height; index++) {
     this.map_[index] = new Array();
   }
-
-  /** TODO: Remove duplicate. Copied from snake class. */
-  var now = new goog.date.Date();
-  // TODO: Decide on an image format. Preferably png.
-  switch(now.getMonth()) {
-    case goog.date.month.OCT:
-      this.headUrl = "url('images/head_halloween.png')";
-      this.bodyUrl = "url('images/body_halloween.gif')";
-      this.gemUrl = "url('images/gem_halloween.png')";
-      break;
-    case goog.date.month.NOV:
-      this.headUrl = "url('images/head_turkey.png')";
-      this.bodyUrl = "url('images/body_turkey.png')";
-      this.gemUrl = "url('images/gem_turkey.png')";
-      break;
-    case goog.date.month.DEC:
-      this.headUrl = "url('images/head_christmas.png')";
-      this.bodyUrl = "url('images/body_christmas.png')";
-      this.gemUrl = "url('images/gem_christmas.png')";
-      break;
-    default:
-      this.headUrl = "url('images/head_default.jpg')";
-      this.bodyUrl = "url('images/body_default.jpg')";
-      this.gemUrl = "url('images/gem_default.png')";
-      break;
-  }
 };
 
 /**
- * Sets the map value to the given piece for the provided position.
+ * Gets the piece type at the provided position.
  *
  * @param {SnakeCoordinates} coordinates The position on the map.
- * @return {SnakeMap.piece} The piece at the provided coordinate.
+ * @return {SnakePiece.type} The piece type at the provided
+ *         coordinates.
  */
 SnakeMap.prototype.getPiece = function(coordinates) {
-  var piece = SnakeMap.piece.UNKNOWN;
   if (this.coordinatesInBounds_(coordinates)) {
-    piece = this.map_[coordinates.row][coordinates.column] ||
-        SnakeMap.piece.EMPTY;
+    var piece = this.map_[coordinates.row][coordinates.column];
+    return piece ? piece.pieceType : SnakePiece.type.EMPTY;
   }
-  return piece;
+  return SnakePiece.type.UNKNOWN;
 };
 
 /**
  * Sets the map value to the given piece for the provided coordinates.
  * If setting the head piece, the old head will be set to a body piece.
  *
- * @param {SnakeMap.piece} piece The piece to set in that coordinate
-                           position.
+ * @param {SnakePiece.type} type The piece type to set.
  * @param {SnakeCoordinates} coordinates The coordinates to set.
- * @return {SnakeMap.piece} The old piece in that coordinate position.
+ * @return {SnakePiece.type} The old type in that coordinate position.
  */
-SnakeMap.prototype.setPiece = function(piece, coordinates) {
-  var oldPiece = this.getPiece(coordinates);
+SnakeMap.prototype.setPiece = function(type, coordinates) {
+  var oldType = this.getPiece(coordinates);
   if (this.coordinatesInBounds_(coordinates)) {
+    var piece = new SnakePiece(coordinates, type);
     this.map_[coordinates.row][coordinates.column] = piece;
-    var pieceDiv = goog.dom.getElement('spot' + coordinates.row + '-' +
-        coordinates.column);
-    switch (piece) {
-      case SnakeMap.piece.EMPTY:
-        pieceDiv.style.backgroundImage = '';
-        break;
-      case SnakeMap.piece.HEAD:
-        pieceDiv.style.backgroundImage = this.headUrl;
-        // Set old head to body.
-        if (this.headCoordinates &&
-            this.getPiece(this.headCoordinates) === SnakeMap.piece.HEAD) {
-          var oldHeadDiv = goog.dom.getElement('spot' +
-            this.headCoordinates.row + '-' + this.headCoordinates.column);
-          oldHeadDiv.style.backgroundImage = this.bodyUrl;
-        }
-        this.headCoordinates = coordinates;
-        break;
-      case SnakeMap.piece.BODY:
-        pieceDiv.style.backgroundImage = this.bodyUrl;
-        break;
-      case SnakeMap.piece.GEM:
-        pieceDiv.style.backgroundImage = this.gemUrl;
+    piece.render();
+    if (piece.pieceType === SnakePiece.type.HEAD) {
+      // Set old head to body and reference new head.
+      if (this.headPiece !== undefined &&
+          this.getPiece(this.headPiece.coordinates) === SnakePiece.type.HEAD) {
+        this.headPiece.pieceType = SnakePiece.type.BODY;
+        this.headPiece.render();
+      }
+      this.headPiece = piece;
     }
   }
-  return oldPiece;
+  return oldType;
 };
 
 /**
@@ -678,9 +639,9 @@ SnakeMap.prototype.setPiece = function(piece, coordinates) {
  */
 SnakeMap.prototype.clear = function(coordinates) {
   if (this.coordinatesInBounds_(coordinates)) {
-    this.map_[coordinates.row][coordinates.column] = SnakeMap.piece.EMPTY;
-    goog.dom.getElement('spot' + coordinates.row + '-' + coordinates.column)
-        .style.backgroundImage = '';
+    var piece = new SnakePiece(coordinates, SnakePiece.type.EMPTY);
+    this.map_[coordinates.row][coordinates.column] = piece;
+    piece.render();
   }
 };
 
@@ -699,11 +660,61 @@ SnakeMap.prototype.coordinatesInBounds_ = function(coordinates) {
 };
 
 /**
- * Enum for snake piece type.
+ * Represents the piece on the snake map. The piece knows how to render
+ * itself.
+ *
+ * @param {SnakeCoordinates} coordinates The coordinates for the piece.
+ * @param {SnakePiece.type} pieceType The pieceType represented on the map.
+ * @constructor
+ */
+SnakePiece = function(coordinates, pieceType) {
+  this.coordinates = coordinates;
+  this.pieceType = pieceType;
+  this.urls = {};
+
+  var now = new goog.date.Date();
+  // TODO: Decide on an image format. Preferably png.
+  switch(now.getMonth()) {
+    case goog.date.month.OCT:
+      this.urls[SnakePiece.type.HEAD] = "url('images/head_halloween.png')";
+      this.urls[SnakePiece.type.BODY] = "url('images/body_halloween.gif')";
+      this.urls[SnakePiece.type.GEM] = "url('images/gem_halloween.png')";
+      break;
+    case goog.date.month.NOV:
+      this.urls[SnakePiece.type.HEAD] = "url('images/head_turkey.png')";
+      this.urls[SnakePiece.type.BODY] = "url('images/body_turkey.png')";
+      this.urls[SnakePiece.type.GEM] = "url('images/gem_turkey.png')";
+      break;
+    case goog.date.month.DEC:
+      this.urls[SnakePiece.type.HEAD] = "url('images/head_christmas.png')";
+      this.urls[SnakePiece.type.BODY] = "url('images/body_christmas.png')";
+      this.urls[SnakePiece.type.GEM] = "url('images/gem_christmas.png')";
+      break;
+    default:
+      this.urls[SnakePiece.type.HEAD] = "url('images/head_default.jpg')";
+      this.urls[SnakePiece.type.BODY] = "url('images/body_default.jpg')";
+      this.urls[SnakePiece.type.GEM] = "url('images/gem_default.png')";
+      break;
+  }
+};
+
+/*
+ * Renders the snake piece in the UI.
+ */
+SnakePiece.prototype.render = function() {
+  var pieceDiv = goog.dom.getElement('spot' + this.coordinates.row + '-' +
+      this.coordinates.column);
+  if (pieceDiv) {
+    pieceDiv.style.backgroundImage = this.urls[this.pieceType] || '';
+  }
+};
+
+/**
+ * Enum for snake piece's type.
  *
  * @enum {number}
  */
-SnakeMap.piece = {
+SnakePiece.type = {
   'UNKNOWN': 0,
   'EMPTY': 1,
   'HEAD': 2,
