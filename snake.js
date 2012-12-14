@@ -343,8 +343,6 @@ Snake = function(id, head) {
    * @type {number}
    */
   this.id = id;
-  this.setSnakePieceImages_();
-
   this.currentDirection = Snake.Direction.RIGHT;
   this.previousDirection = Snake.Direction.RIGHT;
   this.head = head;
@@ -443,39 +441,6 @@ Snake.prototype.append = function(coordinates) {
  */
 Snake.prototype.removeTail = function() {
   return /** @type {SnakeCoordinates} */ this.snakeQueue.dequeue();
-};
-
-
-/**
- * Determines which snake piece images to use based on the current date.
- *
- * @private
- */
-Snake.prototype.setSnakePieceImages_ = function() {
-  var now = new goog.date.Date();
-  // TODO: Decide on an image format. Preferably png.
-  switch(now.getMonth()) {
-    case goog.date.month.OCT:
-      this.headUrl = "url('images/head_halloween.png')";
-      this.bodyUrl = "url('images/body_halloween.gif')";
-      this.gemUrl = "url('images/gem_halloween.png')";
-      break;
-    case goog.date.month.NOV:
-      this.headUrl = "url('images/head_turkey.png')";
-      this.bodyUrl = "url('images/body_turkey.png')";
-      this.gemUrl = "url('images/gem_turkey.png')";
-      break;
-    case goog.date.month.DEC:
-      this.headUrl = "url('images/head_christmas.png')";
-      this.bodyUrl = "url('images/body_christmas.png')";
-      this.gemUrl = "url('images/gem_christmas.png')";
-      break;
-    default:
-      this.headUrl = "url('images/head_default.jpg')";
-      this.bodyUrl = "url('images/body_default.jpg')";
-      this.gemUrl = "url('images/gem_default.png')";
-      break;
-  }
 };
 
 /**
@@ -673,7 +638,6 @@ SnakePiece = function(coordinates, pieceType) {
   this.urls = {};
 
   var now = new goog.date.Date();
-  // TODO: Decide on an image format. Preferably png.
   switch(now.getMonth()) {
     case goog.date.month.OCT:
       this.urls[SnakePiece.type.HEAD] = "url('images/head_halloween.png')";
