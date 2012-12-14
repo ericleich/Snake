@@ -677,7 +677,7 @@ SnakePiece = function(coordinates, pieceType) {
   switch(now.getMonth()) {
     case goog.date.month.OCT:
       this.urls[SnakePiece.type.HEAD] = "url('images/head_halloween.png')";
-      this.urls[SnakePiece.type.BODY] = "url('images/body_halloween.gif')";
+      this.urls[SnakePiece.type.BODY] = "url('images/body_halloween.png')";
       this.urls[SnakePiece.type.GEM] = "url('images/gem_halloween.png')";
       break;
     case goog.date.month.NOV:
@@ -691,8 +691,8 @@ SnakePiece = function(coordinates, pieceType) {
       this.urls[SnakePiece.type.GEM] = "url('images/gem_christmas.png')";
       break;
     default:
-      this.urls[SnakePiece.type.HEAD] = "url('images/head_default.jpg')";
-      this.urls[SnakePiece.type.BODY] = "url('images/body_default.jpg')";
+      this.urls[SnakePiece.type.HEAD] = "url('images/head_default.png')";
+      this.urls[SnakePiece.type.BODY] = "url('images/body_default.png')";
       this.urls[SnakePiece.type.GEM] = "url('images/gem_default.png')";
       break;
   }
