@@ -16,6 +16,13 @@ goog.require('goog.object');
 goog.require('goog.style');
 goog.require('goog.structs.Queue');
 
+/* 
+ * Hack to get soy utils run with uncompiled javascript.
+ * Plan to remove when soyutils only adds the bidi class if
+ * goog.i18n.bidi doens't exist.
+ */
+goog.require('goog.i18n.bidi');
+
   /**
    * The size of the snake and gem squares.
    *
@@ -26,12 +33,13 @@ goog.require('goog.structs.Queue');
 
 /**
  * Manages the snake game.
- * @param {Object} options The options to set in the game.
- * {
- *   'squareSize': 20, // The size of the game pieces.
- *   'boardWidth': 15, // The width of the board in game spaces.
- *   'boardHeight': 25, // The height of the board in game spaces.
- * }
+ * @param {Object} options The options to set in the game. A sample
+ *     object would look like the following:
+ *     {
+ *       'squareSize': 20, // The size of the game pieces.
+ *       'boardWidth': 15, // The width of the board in game spaces.
+ *       'boardHeight': 25, // The height of the board in game spaces.
+ *     }
  * @constructor
  */
 SnakeManager = function(options) {
@@ -51,11 +59,14 @@ SnakeManager = function(options) {
 
   /**
    * The size of the snake and gem squares.
-   *
    * @const
    * @private
    */
   this.SQUARE_SIZE = options["squareSize"];
+  /**
+   * The size of the game board.
+   * @const
+   */
   this.gameBoardSize = new goog.math.Size(options["boardWidth"],
       options["boardHeight"]);
 
@@ -140,9 +151,6 @@ SnakeManager.prototype.startGame = function() {
   goog.dom.setTextContent(goog.dom.getElement('counter'), '0');
 
   // Set up game board.
-  //var gameBoardDivSize = goog.style.getContentBoxSize(this.gameBoardDiv);
-  //this.gameBoardSize = gameBoardDivSize.scale(1 / SQUARE_SIZE).floor();
-  this.createGameBoard_();
   this.map = new SnakeMap(this.gameBoardSize);
 
   // Create first snake piece and gem.

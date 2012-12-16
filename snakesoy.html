@@ -1,14 +1,22 @@
 <html>
 <head>
   <title>Snake</title>
+  <!--Only needed when not using compiled version -->
   <script src="closure-library/closure/goog/base.js"></script>
-  <script type="text/javascript" src="soyutils.js"></script>
-  <script type="text/javascript" src="snakehtml.js"></script>
+  <script src="snake.js"></script>
+  <script src="soyutils.js"></script>
+  <script src="snakehtml.js"></script>
 </head>
 <body>
-  <script type="text/javascript">
-    document.write(snake.app(
-        {squareSize: 22, boardWidth: 15, boardHeight: 10})); 
+  <script>
+    var options = {
+      "squareSize": 10,
+      "boardWidth": 20,
+      "boardHeight": 30
+    }
+    // Render the app.
+    document.write(snake.app(options)); 
+    var snakeManager = new SnakeManager(options);
   </script>
 </body>
 </html>
