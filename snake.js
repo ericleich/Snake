@@ -16,20 +16,49 @@ goog.require('goog.object');
 goog.require('goog.style');
 goog.require('goog.structs.Queue');
 
-/**
- * The size of the snake and gem squares.
- *
- * @const
- * @private
- */
-var SQUARE_SIZE = 20;
+  /**
+   * The size of the snake and gem squares.
+   *
+   * @const
+   * @private
+   */
+  var SQUARE_SIZE = 20;
 
 /**
  * Manages the snake game.
- *
+ * @param {Object} options The options to set in the game.
+ * {
+ *   'squareSize': 20, // The size of the game pieces.
+ *   'boardWidth': 15, // The width of the board in game spaces.
+ *   'boardHeight': 25, // The height of the board in game spaces.
+ * }
  * @constructor
  */
-SnakeManager = function() {
+SnakeManager = function(options) {
+  var defaults = {
+    "squareSize": 20,
+    "boardWidth": 30,
+    "boardHeight": 15
+  };
+
+  options = options || {};
+  // Merge defaults into options.
+  for (var key in defaults) {
+    if (typeof options[key] === 'undefined') {
+      options[key] = defaults[key];
+    }
+  }
+
+  /**
+   * The size of the snake and gem squares.
+   *
+   * @const
+   * @private
+   */
+  this.SQUARE_SIZE = options["squareSize"];
+  this.gameBoardSize = new goog.math.Size(options["boardWidth"],
+      options["boardHeight"]);
+
   this.gameOver = true;
   this.gamePaused = false;
   this.snakeSpeed = 10;
@@ -111,8 +140,8 @@ SnakeManager.prototype.startGame = function() {
   goog.dom.setTextContent(goog.dom.getElement('counter'), '0');
 
   // Set up game board.
-  var gameBoardDivSize = goog.style.getContentBoxSize(this.gameBoardDiv);
-  this.gameBoardSize = gameBoardDivSize.scale(1 / SQUARE_SIZE).floor();
+  //var gameBoardDivSize = goog.style.getContentBoxSize(this.gameBoardDiv);
+  //this.gameBoardSize = gameBoardDivSize.scale(1 / SQUARE_SIZE).floor();
   this.createGameBoard_();
   this.map = new SnakeMap(this.gameBoardSize);
 
@@ -134,7 +163,7 @@ SnakeManager.prototype.startGame = function() {
  * @private
  */
 SnakeManager.prototype.createGameBoard_ = function() {
-  // First clear game board.
+  // First clear game board.asdf
   goog.dom.removeChildren(this.gameBoardDiv);
 
   var gamePieceRow, gamePieceDiv;
