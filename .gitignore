@@ -1,6 +1,7 @@
 # Closure
 closure-library/
 SoyToJsSrcCompiler.jar
+compiler.jar
 soyutils.js
 
 

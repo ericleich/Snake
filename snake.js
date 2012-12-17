@@ -1,8 +1,8 @@
-goog.provide('Snake');
-goog.provide('SnakeManager');
-goog.provide('SnakeMap');
-goog.provide('SnakeState');
-goog.provide('SnakePiece');
+goog.provide('snake');
+goog.provide('snake.Snake');
+goog.provide('snake.Manager');
+goog.provide('snake.Map');
+goog.provide('snake.Piece');
 
 goog.require('goog.array');
 goog.require('goog.date');
@@ -23,14 +23,6 @@ goog.require('goog.structs.Queue');
  */
 goog.require('goog.i18n.bidi');
 
-  /**
-   * The size of the snake and gem squares.
-   *
-   * @const
-   * @private
-   */
-  var SQUARE_SIZE = 20;
-
 /**
  * Manages the snake game.
  * @param {Object} options The options to set in the game. A sample
@@ -42,7 +34,7 @@ goog.require('goog.i18n.bidi');
  *     }
  * @constructor
  */
-SnakeManager = function(options) {
+snake.Manager = function(options) {
   var defaults = {
     "squareSize": 20,
     "boardWidth": 30,
@@ -96,7 +88,7 @@ SnakeManager = function(options) {
  * @param {Object} event The key event.
  * @private
  */
-SnakeManager.prototype.handleKeyEvent = function(event) {
+snake.Manager.prototype.handleKeyEvent = function(event) {
   if (event) {
     switch (event.keyCode) {
       case goog.events.KeyCodes.LEFT:
@@ -132,7 +124,7 @@ SnakeManager.prototype.handleKeyEvent = function(event) {
 /**
  * Starts a new snake game.
  */
-SnakeManager.prototype.startGame = function() {
+snake.Manager.prototype.startGame = function() {
   // Hold a reference to the game board div and snake speed form,
   // as they're used often.
   this.gameBoardDiv = goog.dom.getElement('gameBoard');
@@ -151,14 +143,14 @@ SnakeManager.prototype.startGame = function() {
   goog.dom.setTextContent(goog.dom.getElement('counter'), '0');
 
   // Set up game board.
-  this.map = new SnakeMap(this.gameBoardSize);
+  this.map = new snake.Map(this.gameBoardSize);
 
   // Create first snake piece and gem.
   var centerRow = Math.floor(this.gameBoardSize.height / 2);
   var centerColumn = Math.floor(this.gameBoardSize.width / 2);
-  var headCoordinates = new SnakeCoordinates(centerRow, centerColumn);
-  this.map.setPiece(SnakePiece.type.HEAD, headCoordinates);
-  this.snake = new Snake(1, headCoordinates);
+  var headCoordinates = new snake.Coordinates(centerRow, centerColumn);
+  this.map.setPiece(snake.Piece.type.HEAD, headCoordinates);
+  this.snake = new snake.Snake(1, headCoordinates);
   this.setNewGemCoordinates();
 
   // Start moving the snake.
@@ -167,10 +159,9 @@ SnakeManager.prototype.startGame = function() {
 
 /**
  * Creates a div for each valid position on the game board.
- *
  * @private
  */
-SnakeManager.prototype.createGameBoard_ = function() {
+snake.Manager.prototype.createGameBoard_ = function() {
   // First clear game board.asdf
   goog.dom.removeChildren(this.gameBoardDiv);
 
@@ -182,8 +173,8 @@ SnakeManager.prototype.createGameBoard_ = function() {
       // Create a div to hold a game piece.
       gamePieceDiv = goog.dom.createElement(goog.dom.TagName.DIV);
       gamePieceDiv.id = 'spot' + i + '-' + j;
-      goog.style.setHeight(gamePieceDiv, SQUARE_SIZE);
-      goog.style.setWidth(gamePieceDiv, SQUARE_SIZE);
+      goog.style.setHeight(gamePieceDiv, this.SQUARE_SIZE);
+      goog.style.setWidth(gamePieceDiv, this.SQUARE_SIZE);
       goog.style.setInlineBlock(gamePieceDiv);
       goog.dom.appendChild(gamePieceRow, gamePieceDiv);
     }
@@ -195,29 +186,29 @@ SnakeManager.prototype.createGameBoard_ = function() {
  * Sets new gem coordinates. If gem coordinates are provided, set those
  * coordinates. Otherwise, determine random coordinates.
  *
- * @param {SnakeCoordinates=} opt_gemCoordinates The gem's coordinates.
+ * @param {snake.Coordinates=} opt_gemCoordinates The gem's coordinates.
  * @private
  */
-SnakeManager.prototype.setNewGemCoordinates = function(opt_gemCoordinates) {
+snake.Manager.prototype.setNewGemCoordinates = function(opt_gemCoordinates) {
   // Make sure gem piece is not set on a piece of snake.
   var gemRow = opt_gemCoordinates ? opt_gemCoordinates.row :
       Math.floor(Math.random() * this.gameBoardSize.width);
   var gemColumn = opt_gemCoordinates ? opt_gemCoordinates.column :
       Math.floor(Math.random() * this.gameBoardSize.height);
-  var gemCoordinates = new SnakeCoordinates(gemRow, gemColumn);
-  while (this.map.getPiece(gemCoordinates) != SnakePiece.type.EMPTY) {
+  var gemCoordinates = new snake.Coordinates(gemRow, gemColumn);
+  while (this.map.getPiece(gemCoordinates) != snake.Piece.type.EMPTY) {
     gemCoordinates.row = Math.floor(Math.random() * this.gameBoardSize.width);
     gemCoordinates.column = Math.floor(Math.random() *
         this.gameBoardSize.height);
   }
-  this.map.setPiece(SnakePiece.type.GEM, gemCoordinates);
+  this.map.setPiece(snake.Piece.type.GEM, gemCoordinates);
   this.gemCoordinates = gemCoordinates;
 };
 
 /**
  * Moves each snake 1 position in its current direction.
  */
-SnakeManager.prototype.move = function() {
+snake.Manager.prototype.move = function() {
   // If game is paused, don't move.
   if (this.gamePaused) {
     return;
@@ -225,7 +216,7 @@ SnakeManager.prototype.move = function() {
 
   var newHeadCoordinates = this.snake.move();
   switch (this.map.getPiece(newHeadCoordinates)) {
-    case SnakePiece.type.UNKNOWN:
+    case snake.Piece.type.UNKNOWN:
       // Potential corner case in multiplayer - snake outside game board
       // but tail is still in the map. Don't want to clear the map in
       // 1-player mode though, so just remove the tail under the hood.
@@ -235,7 +226,7 @@ SnakeManager.prototype.move = function() {
       // End game before displaying coordinates out of bounds.
       this.notifyGameOver();
       return;
-    case SnakePiece.type.GEM:
+    case snake.Piece.type.GEM:
       goog.dom.setTextContent(
           goog.dom.getElement('counter'), (this.snake.getScore()) + "");
       this.setNewGemCoordinates();
@@ -244,8 +235,8 @@ SnakeManager.prototype.move = function() {
       this.map.clear(this.snake.removeTail());
   }
 
-  var oldPiece = this.map.setPiece(SnakePiece.type.HEAD, newHeadCoordinates);
-  if (oldPiece === SnakePiece.type.BODY || oldPiece === SnakePiece.type.HEAD) {
+  var oldPiece = this.map.setPiece(snake.Piece.type.HEAD, newHeadCoordinates);
+  if (oldPiece === snake.Piece.type.BODY || oldPiece === snake.Piece.type.HEAD) {
     // Snake ran into itself or another snake.
     this.notifyGameOver();
   } else {
@@ -256,20 +247,20 @@ SnakeManager.prototype.move = function() {
 /**
  * Checks if the snake went out of bounds or ran into itself.
  *
- * @param {SnakeCoordinates} newHeadCoordinates The coordinates of
+ * @param {snake.Coordinates} newHeadCoordinates The coordinates of
  *     the snake's new head.
  * @return {boolean} Whether or not the game is over.
  * @private
  */
-SnakeManager.prototype.isGameOver = function(newHeadCoordinates) {
+snake.Manager.prototype.isGameOver = function(newHeadCoordinates) {
   var piece = this.map.getPiece(newHeadCoordinates);
-  return piece === SnakePiece.type.EMPTY || piece === SnakePiece.type.GEM;
+  return piece === snake.Piece.type.EMPTY || piece === snake.Piece.type.GEM;
 };
 
 /**
  * Notifies the UI that the game is over.
  */
-SnakeManager.prototype.notifyGameOver = function() {
+snake.Manager.prototype.notifyGameOver = function() {
   this.gameOver = true;
   goog.dom.setTextContent(
       goog.dom.getElement('finalScoreNum'), this.snake.getScore() + "");
@@ -288,7 +279,7 @@ SnakeManager.prototype.notifyGameOver = function() {
 /**
  * Saves the state of the snake game.
  */
-SnakeManager.prototype.saveGame = function() {
+snake.Manager.prototype.saveGame = function() {
   if (!this.gameOver) {
     this.saveGameVariables['snake'] = this.snake.clone();
     this.saveGameVariables['snakeSpeed'] = this.snakeSpeed;
@@ -301,7 +292,7 @@ SnakeManager.prototype.saveGame = function() {
  * Loads a previously saved snake game. The current game should be completed
  * before a new game can be loaded.
  */
-SnakeManager.prototype.loadGame = function() {
+snake.Manager.prototype.loadGame = function() {
   if (!this.gameOver || !this.hasSavedGame) {
     return;
   }
@@ -334,14 +325,14 @@ SnakeManager.prototype.loadGame = function() {
 
   // Recreate game board.
   this.createGameBoard_();
-  this.map = new SnakeMap(this.gameBoardSize);
+  this.map = new snake.Map(this.gameBoardSize);
   this.setNewGemCoordinates(this.gemCoordinates);
 
   goog.array.forEach(this.snake.getValues(), function(coordinates) {
     if (this.snake.isHead(coordinates)) {
-      this.map.setPiece(SnakePiece.type.HEAD, coordinates);
+      this.map.setPiece(snake.Piece.type.HEAD, coordinates);
     } else {
-      this.map.setPiece(SnakePiece.type.BODY, coordinates);
+      this.map.setPiece(snake.Piece.type.BODY, coordinates);
     }
   }, this);
   
@@ -351,7 +342,7 @@ SnakeManager.prototype.loadGame = function() {
 /**
  * Pauses the snake game.
  */
-SnakeManager.prototype.pauseGame = function() {
+snake.Manager.prototype.pauseGame = function() {
   if (this.gameOver) {
     return;
   }
@@ -371,17 +362,17 @@ SnakeManager.prototype.pauseGame = function() {
  * Creates a snake object.
  *
  * @param {number} id The snake's id.
- * @param {SnakeCoordinates} head The head piece of the snake.
+ * @param {snake.Coordinates} head The head piece of the snake.
  * @constructor
  */
-Snake = function(id, head) {
+snake.Snake = function(id, head) {
   /**
    * The id of the snake.
    * @type {number}
    */
   this.id = id;
-  this.currentDirection = Snake.Direction.RIGHT;
-  this.previousDirection = Snake.Direction.RIGHT;
+  this.currentDirection = snake.Direction.RIGHT;
+  this.previousDirection = snake.Direction.RIGHT;
   this.head = head;
   /**
    * Represents the body of the snake. The "head" of the queue is the tail of
@@ -397,7 +388,7 @@ Snake = function(id, head) {
  *
  * @enum {number}
  */
-Snake.Direction = {
+snake.Direction = {
   'UP': 1,
   'DOWN': 2,
   'LEFT': 3,
@@ -409,8 +400,8 @@ Snake.Direction = {
  *
  * @return {Snake} A clone of the snake.
  */
-Snake.prototype.clone = function() {
-  var clone = new Snake(this.id, this.head);
+snake.Snake.prototype.clone = function() {
+  var clone = new snake.Snake(this.id, this.head);
   clone.currentDirection = this.currentDirection;
   clone.previousDirection = this.previousDirection;
   clone.snakeQueue = new goog.structs.Queue();
@@ -425,7 +416,7 @@ Snake.prototype.clone = function() {
  *
  * @return {number} The snake's score.
  */
-Snake.prototype.getScore = function() {
+snake.Snake.prototype.getScore = function() {
   return this.snakeQueue.getCount() - 1;
 };
 
@@ -434,26 +425,26 @@ Snake.prototype.getScore = function() {
  *
  * @return {number} The snake's length.
  */
-Snake.prototype.getLength = function() {
+snake.Snake.prototype.getLength = function() {
   return this.snakeQueue.getCount();
 };
 
 /**
  * Get's the snake's coordinates as an array.
  *
- * @return {Array.<SnakeCoordinates>} The snake's array coordinates.
+ * @return {Array.<snake.Coordinates>} The snake's array coordinates.
  */
-Snake.prototype.getValues = function() {
+snake.Snake.prototype.getValues = function() {
   return this.snakeQueue.getValues();
 };
 
 /**
  * Determines whether or not the coordinates are the head coordinates.
  *
- * @param {SnakeCoordinates} coordinates The snake coordinates to compare.
+ * @param {snake.Coordinates} coordinates The snake coordinates to compare.
  * @return {boolean} Whether or not the coordinates represent the head.
  */
-Snake.prototype.isHead = function(coordinates) {
+snake.Snake.prototype.isHead = function(coordinates) {
   return this.head !== undefined && this.head.equals(coordinates);
 };
 
@@ -461,10 +452,10 @@ Snake.prototype.isHead = function(coordinates) {
 /**
  * Adds a piece to the snake.
  *
- * @param {SnakeCoordinates} coordinates The coordinates to append.
- * @return {SnakeCoordinates|null} The old head coordinates, if any.
+ * @param {snake.Coordinates} coordinates The coordinates to append.
+ * @return {snake.Coordinates|null} The old head coordinates, if any.
  */
-Snake.prototype.append = function(coordinates) {
+snake.Snake.prototype.append = function(coordinates) {
   var oldHead = this.head;
   this.head = coordinates;
   this.snakeQueue.enqueue(coordinates);
@@ -474,10 +465,10 @@ Snake.prototype.append = function(coordinates) {
 /**
  * Removes the snake's tail coordinates.
  *
- * @return {SnakeCoordinates} The tail coordinates.
+ * @return {snake.Coordinates} The tail coordinates.
  */
-Snake.prototype.removeTail = function() {
-  return /** @type {SnakeCoordinates} */ this.snakeQueue.dequeue();
+snake.Snake.prototype.removeTail = function() {
+  return /** @type {snake.Coordinates} */ this.snakeQueue.dequeue();
 };
 
 /**
@@ -486,26 +477,26 @@ Snake.prototype.removeTail = function() {
  * @param {number} keyCode The event key code. Can be UP, DOWN, LEFT, or RIGHT.
  * @private
  */
-Snake.prototype.changeDirection = function(keyCode) {
+snake.Snake.prototype.changeDirection = function(keyCode) {
   switch (keyCode) {
     case goog.events.KeyCodes.LEFT:
-      if (this.previousDirection != Snake.Direction.RIGHT) {
-        this.currentDirection = Snake.Direction.LEFT;
+      if (this.previousDirection != snake.Direction.RIGHT) {
+        this.currentDirection = snake.Direction.LEFT;
       }
       break;
     case goog.events.KeyCodes.UP:
-      if (this.previousDirection != Snake.Direction.DOWN) {
-        this.currentDirection = Snake.Direction.UP;
+      if (this.previousDirection != snake.Direction.DOWN) {
+        this.currentDirection = snake.Direction.UP;
       }
       break;
     case goog.events.KeyCodes.RIGHT:
-      if (this.previousDirection != Snake.Direction.LEFT) {
-        this.currentDirection = Snake.Direction.RIGHT;
+      if (this.previousDirection != snake.Direction.LEFT) {
+        this.currentDirection = snake.Direction.RIGHT;
       }
       break;
     case goog.events.KeyCodes.DOWN:
-      if (this.previousDirection != Snake.Direction.UP) {
-        this.currentDirection = Snake.Direction.DOWN;
+      if (this.previousDirection != snake.Direction.UP) {
+        this.currentDirection = snake.Direction.DOWN;
       }
       break;
    }
@@ -514,21 +505,21 @@ Snake.prototype.changeDirection = function(keyCode) {
 /**
  * Moves the snake one space in the current direction.
  *
- * @return {SnakeCoordinates} The new head coordinates.
+ * @return {snake.Coordinates} The new head coordinates.
  */
-Snake.prototype.move = function() {
+snake.Snake.prototype.move = function() {
   var newHead = this.head.clone();
   switch (this.currentDirection) {
-    case Snake.Direction.LEFT:
+    case snake.Direction.LEFT:
       newHead.column--;
       break;
-    case Snake.Direction.UP:
+    case snake.Direction.UP:
       newHead.row--;
       break;
-    case Snake.Direction.RIGHT:
+    case snake.Direction.RIGHT:
       newHead.column++;
       break;
-    case Snake.Direction.DOWN:
+    case snake.Direction.DOWN:
       newHead.row++;
       break;
   }
@@ -546,7 +537,7 @@ Snake.prototype.move = function() {
  * @constructor
  * @private
  */
-SnakeCoordinates = function(row, column) {
+snake.Coordinates = function(row, column) {
   this.row = row;
   this.column = column;
 };
@@ -554,19 +545,19 @@ SnakeCoordinates = function(row, column) {
 /**
  * Clones the snake coordinates.
  *
- * @return {SnakeCoordinates} A deep copy clone of the snake coordinates.
+ * @return {snake.Coordinates} A deep copy clone of the snake coordinates.
  */
-SnakeCoordinates.prototype.clone = function() {
-  return new SnakeCoordinates(this.row, this.column);
+snake.Coordinates.prototype.clone = function() {
+  return new snake.Coordinates(this.row, this.column);
 };
 
 /**
- * Compares two SnakeCoordinates.
+ * Compares two snake coordinates.
  *
- * @param {SnakeCoordinates} other The other SnakeCoordinates to compare.
- * @return {boolean} Whether or not the snake coordinates are equal.
+ * @param {snake.Coordinates} other The other snake coordinates to compare.
+ * @return {boolean} True if the snake coordinates are equal.
  */
-SnakeCoordinates.prototype.equals = function(other) {
+snake.Coordinates.prototype.equals = function(other) {
   return this.row === other.row && this.column === other.column;
 };
 
@@ -577,7 +568,7 @@ SnakeCoordinates.prototype.equals = function(other) {
  * @constructor
  * @private
  */
-SnakeMap = function(size) {
+snake.Map = function(size) {
   this.size = size;
   /** 
    * Represents the game board. Uses a 2D array indexed by [row][column],
@@ -595,37 +586,37 @@ SnakeMap = function(size) {
 /**
  * Gets the piece type at the provided position.
  *
- * @param {SnakeCoordinates} coordinates The position on the map.
- * @return {SnakePiece.type} The piece type at the provided
+ * @param {snake.Coordinates} coordinates The position on the map.
+ * @return {snake.Piece.type} The piece type at the provided
  *         coordinates.
  */
-SnakeMap.prototype.getPiece = function(coordinates) {
+snake.Map.prototype.getPiece = function(coordinates) {
   if (this.coordinatesInBounds_(coordinates)) {
     var piece = this.map_[coordinates.row][coordinates.column];
-    return piece ? piece.pieceType : SnakePiece.type.EMPTY;
+    return piece ? piece.pieceType : snake.Piece.type.EMPTY;
   }
-  return SnakePiece.type.UNKNOWN;
+  return snake.Piece.type.UNKNOWN;
 };
 
 /**
  * Sets the map value to the given piece for the provided coordinates.
  * If setting the head piece, the old head will be set to a body piece.
  *
- * @param {SnakePiece.type} type The piece type to set.
- * @param {SnakeCoordinates} coordinates The coordinates to set.
- * @return {SnakePiece.type} The old type in that coordinate position.
+ * @param {snake.Piece.type} type The piece type to set.
+ * @param {snake.Coordinates} coordinates The coordinates to set.
+ * @return {snake.Piece.type} The old type in that coordinate position.
  */
-SnakeMap.prototype.setPiece = function(type, coordinates) {
+snake.Map.prototype.setPiece = function(type, coordinates) {
   var oldType = this.getPiece(coordinates);
   if (this.coordinatesInBounds_(coordinates)) {
-    var piece = new SnakePiece(coordinates, type);
+    var piece = new snake.Piece(coordinates, type);
     this.map_[coordinates.row][coordinates.column] = piece;
     piece.render();
-    if (piece.pieceType === SnakePiece.type.HEAD) {
+    if (piece.pieceType === snake.Piece.type.HEAD) {
       // Set old head to body and reference new head.
       if (this.headPiece !== undefined &&
-          this.getPiece(this.headPiece.coordinates) === SnakePiece.type.HEAD) {
-        this.headPiece.pieceType = SnakePiece.type.BODY;
+        this.getPiece(this.headPiece.coordinates) === snake.Piece.type.HEAD) {
+        this.headPiece.pieceType = snake.Piece.type.BODY;
         this.headPiece.render();
       }
       this.headPiece = piece;
@@ -637,11 +628,11 @@ SnakeMap.prototype.setPiece = function(type, coordinates) {
 /**
  * Clears the map at the provided position.
  *
- * @param {SnakeCoordinates} coordinates The coordinates to clear.
+ * @param {snake.Coordinates} coordinates The coordinates to clear.
  */
-SnakeMap.prototype.clear = function(coordinates) {
+snake.Map.prototype.clear = function(coordinates) {
   if (this.coordinatesInBounds_(coordinates)) {
-    var piece = new SnakePiece(coordinates, SnakePiece.type.EMPTY);
+    var piece = new snake.Piece(coordinates, snake.Piece.type.EMPTY);
     this.map_[coordinates.row][coordinates.column] = piece;
     piece.render();
   }
@@ -650,11 +641,11 @@ SnakeMap.prototype.clear = function(coordinates) {
 /**
  * Determines whether or not the current coordinates are in bounds.
  *
- * @param {SnakeCoordinates} coordinates The coordinates.
+ * @param {snake.Coordinates} coordinates The coordinates.
  * @return {boolean} Whether or not the coordinates are in bounds.
  * @private
  */
-SnakeMap.prototype.coordinatesInBounds_ = function(coordinates) {
+snake.Map.prototype.coordinatesInBounds_ = function(coordinates) {
   return coordinates.row >= 0 &&
       coordinates.row < this.size.height &&
       coordinates.column >= 0 &&
@@ -665,11 +656,11 @@ SnakeMap.prototype.coordinatesInBounds_ = function(coordinates) {
  * Represents the piece on the snake map. The piece knows how to render
  * itself.
  *
- * @param {SnakeCoordinates} coordinates The coordinates for the piece.
- * @param {SnakePiece.type} pieceType The pieceType represented on the map.
+ * @param {snake.Coordinates} coordinates The coordinates for the piece.
+ * @param {snake.Piece.type} pieceType The pieceType represented on the map.
  * @constructor
  */
-SnakePiece = function(coordinates, pieceType) {
+snake.Piece = function(coordinates, pieceType) {
   this.coordinates = coordinates;
   this.pieceType = pieceType;
   this.urls = {};
@@ -677,24 +668,24 @@ SnakePiece = function(coordinates, pieceType) {
   var now = new goog.date.Date();
   switch(now.getMonth()) {
     case goog.date.month.OCT:
-      this.urls[SnakePiece.type.HEAD] = "url('images/head_halloween.png')";
-      this.urls[SnakePiece.type.BODY] = "url('images/body_halloween.png')";
-      this.urls[SnakePiece.type.GEM] = "url('images/gem_halloween.png')";
+      this.urls[snake.Piece.type.HEAD] = "url('images/head_halloween.png')";
+      this.urls[snake.Piece.type.BODY] = "url('images/body_halloween.png')";
+      this.urls[snake.Piece.type.GEM] = "url('images/gem_halloween.png')";
       break;
     case goog.date.month.NOV:
-      this.urls[SnakePiece.type.HEAD] = "url('images/head_turkey.png')";
-      this.urls[SnakePiece.type.BODY] = "url('images/body_turkey.png')";
-      this.urls[SnakePiece.type.GEM] = "url('images/gem_turkey.png')";
+      this.urls[snake.Piece.type.HEAD] = "url('images/head_turkey.png')";
+      this.urls[snake.Piece.type.BODY] = "url('images/body_turkey.png')";
+      this.urls[snake.Piece.type.GEM] = "url('images/gem_turkey.png')";
       break;
     case goog.date.month.DEC:
-      this.urls[SnakePiece.type.HEAD] = "url('images/head_christmas.png')";
-      this.urls[SnakePiece.type.BODY] = "url('images/body_christmas.png')";
-      this.urls[SnakePiece.type.GEM] = "url('images/gem_christmas.png')";
+      this.urls[snake.Piece.type.HEAD] = "url('images/head_christmas.png')";
+      this.urls[snake.Piece.type.BODY] = "url('images/body_christmas.png')";
+      this.urls[snake.Piece.type.GEM] = "url('images/gem_christmas.png')";
       break;
     default:
-      this.urls[SnakePiece.type.HEAD] = "url('images/head_default.png')";
-      this.urls[SnakePiece.type.BODY] = "url('images/body_default.png')";
-      this.urls[SnakePiece.type.GEM] = "url('images/gem_default.png')";
+      this.urls[snake.Piece.type.HEAD] = "url('images/head_default.png')";
+      this.urls[snake.Piece.type.BODY] = "url('images/body_default.png')";
+      this.urls[snake.Piece.type.GEM] = "url('images/gem_default.png')";
       break;
   }
 };
@@ -702,7 +693,7 @@ SnakePiece = function(coordinates, pieceType) {
 /*
  * Renders the snake piece in the UI.
  */
-SnakePiece.prototype.render = function() {
+snake.Piece.prototype.render = function() {
   var pieceDiv = goog.dom.getElement('spot' + this.coordinates.row + '-' +
       this.coordinates.column);
   if (pieceDiv) {
@@ -715,7 +706,7 @@ SnakePiece.prototype.render = function() {
  *
  * @enum {number}
  */
-SnakePiece.type = {
+snake.Piece.type = {
   'UNKNOWN': 0,
   'EMPTY': 1,
   'HEAD': 2,
@@ -723,10 +714,9 @@ SnakePiece.type = {
   'GEM': 4
 };
 
-goog.exportSymbol('Snake', Snake);
-goog.exportSymbol('SnakeManager', SnakeManager);
-goog.exportSymbol('SnakeState', SnakeState);
-goog.exportProperty(SnakeManager.prototype, 'move', SnakeManager.prototype.move);
-goog.exportProperty(SnakeManager.prototype, 'startGame', SnakeManager.prototype.startGame);
-goog.exportProperty(SnakeManager.prototype, 'saveGame', SnakeManager.prototype.saveGame);
-goog.exportProperty(SnakeManager.prototype, 'loadGame', SnakeManager.prototype.loadGame);
+goog.exportSymbol('snake.Snake', snake.Snake);
+goog.exportSymbol('snake.Manager', snake.Manager);
+goog.exportProperty(snake.Manager.prototype, 'move', snake.Manager.prototype.move);
+goog.exportProperty(snake.Manager.prototype, 'startGame', snake.Manager.prototype.startGame);
+goog.exportProperty(snake.Manager.prototype, 'saveGame', snake.Manager.prototype.saveGame);
+goog.exportProperty(snake.Manager.prototype, 'loadGame', snake.Manager.prototype.loadGame);

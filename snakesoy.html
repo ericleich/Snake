@@ -3,7 +3,7 @@
   <title>Snake</title>
   <!--Only needed when not using compiled version -->
   <script src="closure-library/closure/goog/base.js"></script>
-  <script src="snake.js"></script>
+  <script src="snake-compiled.js"></script>
   <script src="soyutils.js"></script>
   <script src="snakehtml.js"></script>
 </head>
@@ -16,7 +16,7 @@
     }
     // Render the app.
     document.write(snake.app(options)); 
-    var snakeManager = new SnakeManager(options);
+    var snakeManager = new snake.Manager(options);
   </script>
 </body>
 </html>
