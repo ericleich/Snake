@@ -1,4 +1,4 @@
-================= Snake ================
+================== Snake =================
 
 This is a web version of the classic game Snake. Technologies used in this
 project are:
